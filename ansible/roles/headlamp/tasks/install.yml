@@ -1,0 +1,35 @@
+---
+- name: Add Headlamp Helm repository
+  kubernetes.core.helm_repository:
+    name: headlamp
+    repo_url: "{{ headlamp_helm_repo_url }}"
+
+- name: Install Headlamp
+  kubernetes.core.helm:
+    name: "{{ headlamp_release_name }}"
+    chart_ref: headlamp/headlamp
+    release_namespace: "{{ headlamp_namespace }}"
+    create_namespace: true
+    wait: true
+    wait_timeout: 5m
+    update_repo_cache: true
+    values:
+      config:
+        inCluster: true
+      service:
+        type: ClusterIP
+      resources:
+        requests:
+          cpu: 100m
+          memory: 128Mi
+        limits:
+          cpu: 500m
+          memory: 256Mi
+
+- name: Wait for Headlamp deployment to be available
+  ansible.builtin.command: >-
+    kubectl wait --for=condition=Available deployment/{{ headlamp_release_name }}
+    -n {{ headlamp_namespace }} --timeout=300s
+  environment:
+    KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+  changed_when: false

@@ -1,0 +1,46 @@
+---
+- name: Skip Kafka installation when disabled
+  ansible.builtin.meta: end_play
+  when: not (kafka_enabled | bool)
+
+- name: Remove legacy Bitnami Helm release if present
+  kubernetes.core.helm:
+    name: kafka
+    release_namespace: "{{ kafka_namespace }}"
+    state: absent
+  failed_when: false
+
+- name: Apply Kafka namespace
+  kubernetes.core.k8s:
+    state: present
+    template: namespace.yaml.j2
+
+- name: Apply Kafka services
+  kubernetes.core.k8s:
+    state: present
+    template: service.yaml.j2
+
+- name: Apply Kafka StatefulSet
+  kubernetes.core.k8s:
+    state: present
+    template: statefulset.yaml.j2
+
+- name: Wait for Kafka pod to be ready
+  ansible.builtin.command: >-
+    kubectl wait --for=condition=Ready pod/{{ kafka_app_name }}-0
+    -n {{ kafka_namespace }} --timeout=600s
+  environment:
+    KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+  changed_when: false
+
+- name: Show Kafka cluster-internal endpoint
+  ansible.builtin.debug:
+    msg:
+      - "Kafka installed (dev, single broker, KRaft, cluster-internal only)"
+      - "Bootstrap (in-cluster): {{ kafka_bootstrap }}"
+      - "Local access: kubectl port-forward -n {{ kafka_namespace }} svc/{{ kafka_service_name }} {{ kafka_client_port }}:{{ kafka_client_port }}"
+      - "CLI inside pod: kubectl exec -n {{ kafka_namespace }} {{ kafka_app_name }}-0 -- /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:{{ kafka_client_port }} --list"
+      - "Not exposed via Traefik or NodePort"
+
+- name: Run Kafka validation tasks
+  ansible.builtin.import_tasks: validate.yml

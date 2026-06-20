@@ -1,0 +1,11 @@
+---
+- name: Restart K3s for updated registry mirrors
+  ansible.builtin.shell: |
+    if systemctl is-active --quiet k3s; then
+      systemctl restart k3s
+    elif systemctl is-active --quiet k3s-agent; then
+      systemctl restart k3s-agent
+    fi
+  args:
+    executable: /bin/bash
+  changed_when: true

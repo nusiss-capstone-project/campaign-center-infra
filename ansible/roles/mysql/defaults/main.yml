@@ -1,0 +1,5 @@
+---
+# Placeholder — future: Bitnami MySQL/MariaDB Helm chart in namespace `data`
+mysql_enabled: false
+mysql_namespace: data
+mysql_release_name: mysql

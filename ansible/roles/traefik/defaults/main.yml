@@ -1,0 +1,12 @@
+---
+# Traefik exposure (dev: hostPort on node 80/443; prod: loadbalancer — not implemented yet)
+traefik_exposure_mode: hostport
+traefik_http_port: 80
+traefik_https_port: 443
+
+# Reserved for production LoadBalancer mode (Alibaba Cloud SLB) — not used in dev
+# traefik_loadbalancer_class: ""
+# traefik_loadbalancer_annotations: {}
+
+# Application routing (Headlamp, Grafana, AKHQ, etc.) lives in each app role.
+# Traefik only configures cluster ingress controller exposure.

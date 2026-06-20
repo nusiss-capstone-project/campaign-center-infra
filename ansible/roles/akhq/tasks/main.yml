@@ -1,0 +1,5 @@
+---
+- name: AKHQ role placeholder
+  ansible.builtin.debug:
+    msg: "AKHQ not installed — set akhq_enabled=true when this role is implemented."
+  when: not (akhq_enabled | bool)

@@ -1,0 +1,49 @@
+---
+- name: Uninstall cert-manager Helm release if present
+  kubernetes.core.helm:
+    name: cert-manager
+    state: absent
+    release_namespace: cert-manager
+  failed_when: false
+  when: headlamp_cleanup_cert_manager | bool
+
+- name: Uninstall Rancher Helm release if present
+  kubernetes.core.helm:
+    name: rancher
+    state: absent
+    release_namespace: cattle-system
+  failed_when: false
+  when: headlamp_cleanup_rancher | bool
+
+- name: Remove legacy Rancher Traefik IngressRoute
+  kubernetes.core.k8s:
+    state: absent
+    api_version: traefik.io/v1alpha1
+    kind: IngressRoute
+    name: rancher
+    namespace: cattle-system
+  failed_when: false
+  when: headlamp_cleanup_rancher | bool
+
+- name: Remove legacy Rancher ServersTransport
+  kubernetes.core.k8s:
+    state: absent
+    api_version: traefik.io/v1alpha1
+    kind: ServersTransport
+    name: rancher-transport
+    namespace: cattle-system
+  failed_when: false
+  when: headlamp_cleanup_rancher | bool
+
+- name: Remove legacy Rancher Ingress resources
+  kubernetes.core.k8s:
+    state: absent
+    api_version: networking.k8s.io/v1
+    kind: Ingress
+    name: "{{ item }}"
+    namespace: cattle-system
+  loop:
+    - rancher
+    - rancher-traefik
+  failed_when: false
+  when: headlamp_cleanup_rancher | bool

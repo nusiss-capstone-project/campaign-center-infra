@@ -1,0 +1,41 @@
+---
+- name: Verify K3s cluster health
+  hosts: k3s_servers[0]
+  gather_facts: false
+  tasks:
+    - name: Wait for k3s service
+      ansible.builtin.command: systemctl is-active k3s
+      register: k3s_active
+      changed_when: false
+      failed_when: k3s_active.stdout | trim != 'active'
+      retries: 10
+      delay: 6
+      until: k3s_active.stdout | trim == 'active'
+
+    - name: Get node list
+      ansible.builtin.command: k3s kubectl get nodes -o wide
+      register: k3s_nodes
+      changed_when: false
+
+    - name: Show cluster nodes
+      ansible.builtin.debug:
+        var: k3s_nodes.stdout_lines
+
+    - name: Verify all nodes are Ready
+      ansible.builtin.command: k3s kubectl get nodes --no-headers
+      register: k3s_node_status
+      changed_when: false
+      failed_when: k3s_node_status.stdout is search('NotReady')
+
+- name: Verify agents are registered (when present)
+  hosts: k3s_agents
+  gather_facts: false
+  tasks:
+    - name: Wait for k3s-agent service
+      ansible.builtin.command: systemctl is-active k3s-agent
+      register: agent_active
+      changed_when: false
+      failed_when: agent_active.stdout | trim != 'active'
+      retries: 10
+      delay: 6
+      until: agent_active.stdout | trim == 'active'

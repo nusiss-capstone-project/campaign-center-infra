@@ -1,0 +1,31 @@
+# Copy to environments/dev/terraform.tfvars and fill in Alibaba Cloud-specific values.
+# terraform.tfvars is gitignored; never commit secrets.
+
+region       = "ap-southeast-1"
+project_name = "campaign-center"
+environment  = "dev"
+
+zones = ["ap-southeast-1a"]
+vswitch_cidrs = {
+  "ap-southeast-1a" = "10.10.1.0/24"
+}
+
+instance_type = "ecs.t6-c1m2.large"
+image_id      = "ubuntu_22_04_x64_20G_alibase_20260522.vhd"
+key_pair_name = "campaign-center-key"
+
+allowed_ssh_cidr   = "195.133.129.85/32"
+allowed_admin_cidr = "195.133.129.85/32"
+
+master_count = 1
+worker_count = 0
+
+vpc_cidr = "10.10.0.0/16"
+
+system_disk_category          = "cloud_auto"
+system_disk_size              = 60
+system_disk_performance_level = ""
+
+eip_attachment_mode = "ecs"
+eip_bandwidth       = 5
+create_eip          = false

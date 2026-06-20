@@ -1,0 +1,66 @@
+---
+- name: Check if K3s agent is already running
+  ansible.builtin.command: systemctl is-active k3s-agent
+  register: k3s_agent_service
+  changed_when: false
+  failed_when: false
+
+- name: Stat k3s agent binary
+  ansible.builtin.stat:
+    path: /usr/local/bin/k3s
+  register: k3s_agent_binary
+
+- name: Skip agent installation when already active
+  ansible.builtin.meta: end_host
+  when:
+    - k3s_agent_binary.stat.exists
+    - k3s_agent_service.stdout | default('') | trim == 'active'
+
+- name: Wait for first server API
+  ansible.builtin.wait_for:
+    host: "{{ hostvars[groups['k3s_servers'][0]].private_ip }}"
+    port: "{{ k3s_api_port }}"
+    timeout: 300
+
+- name: Wait for node token on first server
+  ansible.builtin.wait_for:
+    path: "{{ k3s_token_file }}"
+    timeout: 300
+  delegate_to: "{{ groups['k3s_servers'][0] }}"
+
+- name: Read cluster join token from first server
+  ansible.builtin.command: cat {{ k3s_token_file }}
+  delegate_to: "{{ groups['k3s_servers'][0] }}"
+  register: k3s_cluster_token
+  changed_when: false
+
+- name: Ensure K3s config directory exists
+  ansible.builtin.file:
+    path: /etc/k3s
+    state: directory
+    mode: "0755"
+
+- name: Render K3s agent environment file
+  ansible.builtin.template:
+    src: k3s-agent.env.j2
+    dest: /etc/k3s/k3s-agent.env
+    mode: "0600"
+
+- name: Install K3s agent
+  ansible.builtin.shell: |
+    set -euo pipefail
+    curl -sfL https://get.k3s.io | \
+      INSTALL_K3S_VERSION="{{ k3s_version }}" \
+      K3S_URL="https://{{ hostvars[groups['k3s_servers'][0]].private_ip }}:{{ k3s_api_port }}" \
+      K3S_TOKEN="{{ k3s_cluster_token.stdout | trim }}" \
+      sh -s - agent --node-ip {{ private_ip }}
+  args:
+    executable: /bin/bash
+
+- name: Wait for K3s agent service
+  ansible.builtin.command: systemctl is-active k3s-agent
+  register: k3s_agent_active
+  changed_when: false
+  retries: 20
+  delay: 6
+  until: k3s_agent_active.stdout | trim == 'active'

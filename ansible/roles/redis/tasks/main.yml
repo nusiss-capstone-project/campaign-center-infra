@@ -1,0 +1,5 @@
+---
+- name: Redis role placeholder
+  ansible.builtin.debug:
+    msg: "Redis not installed — set redis_enabled=true when this role is implemented."
+  when: not (redis_enabled | bool)

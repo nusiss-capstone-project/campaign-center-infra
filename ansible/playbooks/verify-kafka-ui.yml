@@ -1,0 +1,22 @@
+---
+- name: Verify Kafka UI installation and Traefik routing
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  become: false
+  vars:
+    master_public_ip: "{{ hostvars[groups['k3s_servers'][0]].ansible_host }}"
+    kafka_ui_host: "{{ lookup('env', 'KAFKA_UI_HOST') | default('kafka.' + master_public_ip + '.sslip.io', true) }}"
+    traefik_http_port: 80
+  pre_tasks:
+    - name: Validate KUBECONFIG is set
+      ansible.builtin.assert:
+        that:
+          - lookup('env', 'KUBECONFIG') | length > 0
+        fail_msg: >-
+          KUBECONFIG is not set. Run install-kafka-ui.sh or export KUBECONFIG
+          to kubeconfigs/<env>.yaml.
+
+  roles:
+    - role: kafka-ui
+      tasks_from: validate.yml

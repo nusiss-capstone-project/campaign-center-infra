@@ -1,0 +1,26 @@
+---
+kafka_ui_enabled: true
+kafka_ui_namespace: messaging
+kafka_ui_app_name: kafka-ui
+kafka_ui_image: provectuslabs/kafka-ui:v0.7.2
+
+# Connect to the Apache Kafka broker deployed by the kafka role
+kafka_ui_cluster_name: dev
+kafka_ui_bootstrap_servers: kafka.messaging.svc.cluster.local:9092
+
+kafka_ui_service_name: kafka-ui
+kafka_ui_service_port: 8080
+
+# Computed in playbook from inventory / KAFKA_UI_HOST
+kafka_ui_host: ""
+
+# Traefik IngressRoute (same pattern as Headlamp)
+kafka_ui_ingressroute_name: kafka-ui
+kafka_ui_traefik_entrypoint: web
+kafka_ui_tls_enabled: false
+
+kafka_ui_memory_request: 128Mi
+kafka_ui_memory_limit: 256Mi
+kafka_ui_cpu_request: 50m
+kafka_ui_cpu_limit: 200m
+kafka_ui_java_opts: "-Xmx128m -Xms64m"

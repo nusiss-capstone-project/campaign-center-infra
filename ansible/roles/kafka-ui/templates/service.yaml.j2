@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ kafka_ui_service_name }}
+  namespace: {{ kafka_ui_namespace }}
+  labels:
+    app.kubernetes.io/name: {{ kafka_ui_app_name }}
+    app.kubernetes.io/component: ui
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: {{ kafka_ui_app_name }}
+  ports:
+    - name: http
+      port: {{ kafka_ui_service_port }}
+      targetPort: http

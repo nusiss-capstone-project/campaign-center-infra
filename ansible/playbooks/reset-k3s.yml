@@ -1,0 +1,26 @@
+---
+# DESTRUCTIVE — uninstalls K3s from all nodes. Requires CONFIRM_RESET=true via wrapper script.
+- name: Uninstall K3s agents first
+  hosts: k3s_agents
+  gather_facts: false
+  tasks:
+    - name: Run k3s-agent-uninstall.sh when present
+      ansible.builtin.command: /usr/local/bin/k3s-agent-uninstall.sh
+      args:
+        removes: /usr/local/bin/k3s-agent-uninstall.sh
+      register: agent_uninstall
+      changed_when: agent_uninstall.rc == 0
+      failed_when: false
+
+- name: Uninstall K3s servers
+  hosts: k3s_servers
+  serial: 1
+  gather_facts: false
+  tasks:
+    - name: Run k3s-uninstall.sh when present
+      ansible.builtin.command: /usr/local/bin/k3s-uninstall.sh
+      args:
+        removes: /usr/local/bin/k3s-uninstall.sh
+      register: server_uninstall
+      changed_when: server_uninstall.rc == 0
+      failed_when: false

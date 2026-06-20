@@ -1,0 +1,5 @@
+---
+- name: Monitoring role placeholder
+  ansible.builtin.debug:
+    msg: "Monitoring stack not installed — set monitoring_enabled=true when this role is implemented."
+  when: not (monitoring_enabled | bool)

@@ -1,0 +1,5 @@
+---
+# Placeholder — future: Grafana / Prometheus stack in namespace `monitoring`
+monitoring_enabled: false
+monitoring_namespace: monitoring
+grafana_release_name: grafana

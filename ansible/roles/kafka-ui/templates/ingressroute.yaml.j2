@@ -1,0 +1,21 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: {{ kafka_ui_ingressroute_name }}
+  namespace: {{ kafka_ui_namespace }}
+spec:
+{% if kafka_ui_tls_enabled | bool %}
+  entryPoints:
+    - websecure
+  tls:
+    secretName: {{ kafka_ui_ingressroute_name }}-tls
+{% else %}
+  entryPoints:
+    - {{ kafka_ui_traefik_entrypoint }}
+{% endif %}
+  routes:
+    - match: Host(`{{ kafka_ui_host }}`)
+      kind: Rule
+      services:
+        - name: {{ kafka_ui_service_name }}
+          port: {{ kafka_ui_service_port }}

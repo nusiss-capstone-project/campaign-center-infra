@@ -1,0 +1,24 @@
+---
+- name: Assert supported Traefik exposure mode
+  ansible.builtin.assert:
+    that:
+      - traefik_exposure_mode == 'hostport'
+    fail_msg: >-
+      Only traefik_exposure_mode=hostport is implemented for development.
+      Production loadbalancer mode will be added later.
+
+- name: Verify K3s Traefik is present
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: kube-system
+    label_selectors:
+      - app.kubernetes.io/name=traefik
+  register: traefik_pods
+
+- name: Fail when Traefik is not running in kube-system
+  ansible.builtin.assert:
+    that:
+      - traefik_pods.resources | length > 0
+    fail_msg: >-
+      No Traefik pods found in kube-system. Install K3s before running this playbook.

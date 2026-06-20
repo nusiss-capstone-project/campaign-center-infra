@@ -1,0 +1,12 @@
+---
+- name: Remove legacy Rancher platform components
+  ansible.builtin.import_tasks: cleanup-legacy.yml
+
+- name: Install Headlamp
+  ansible.builtin.import_tasks: install.yml
+
+- name: Configure Kubernetes auth for Headlamp (dev ServiceAccount)
+  ansible.builtin.import_tasks: rbac.yml
+
+- name: Expose Headlamp through Traefik
+  ansible.builtin.import_tasks: routing.yml

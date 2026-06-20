@@ -1,0 +1,17 @@
+---
+- name: Apply Traefik HelmChartConfig for hostPort exposure
+  kubernetes.core.k8s:
+    state: present
+    template: helmchartconfig-traefik.yaml.j2
+  when: traefik_exposure_mode == 'hostport'
+
+- name: Wait for Traefik pods to become ready after HelmChartConfig
+  ansible.builtin.command: >-
+    kubectl wait --for=condition=Ready pods
+    -n kube-system
+    -l app.kubernetes.io/name=traefik
+    --timeout=300s
+  environment:
+    KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+  changed_when: false
+  when: traefik_exposure_mode == 'hostport'

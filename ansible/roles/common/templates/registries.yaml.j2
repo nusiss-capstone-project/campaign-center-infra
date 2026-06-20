@@ -1,0 +1,6 @@
+mirrors:
+  docker.io:
+    endpoint:
+{% for mirror in k3s_docker_io_mirrors %}
+      - "{{ mirror }}"
+{% endfor %}

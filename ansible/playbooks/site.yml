@@ -1,0 +1,13 @@
+---
+# Dev platform stack — run after install-k3s.sh
+#
+# Usage:
+#   ./ansible/scripts/install-platform.sh dev
+# Or:
+#   export KUBECONFIG=kubeconfigs/dev.yaml
+#   ansible-playbook -i inventories/dev/hosts.yml playbooks/site.yml
+
+- import_playbook: install-traefik.yml
+- import_playbook: install-headlamp.yml
+- import_playbook: install-kafka.yml
+- import_playbook: install-kafka-ui.yml

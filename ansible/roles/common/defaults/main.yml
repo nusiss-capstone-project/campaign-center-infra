@@ -1,0 +1,7 @@
+---
+# Accelerate docker.io pulls on nodes in CN regions (Headlamp, platform images, etc.).
+k3s_registry_mirrors_enabled: true
+k3s_docker_io_mirrors:
+  - "https://docker.m.daocloud.io"
+  - "https://dockerproxy.com"
+  - "https://registry-1.docker.io"

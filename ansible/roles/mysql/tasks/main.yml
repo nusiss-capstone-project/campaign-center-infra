@@ -1,0 +1,5 @@
+---
+- name: MySQL role placeholder
+  ansible.builtin.debug:
+    msg: "MySQL not installed — set mysql_enabled=true when this role is implemented."
+  when: not (mysql_enabled | bool)

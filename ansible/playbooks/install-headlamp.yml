@@ -1,0 +1,43 @@
+---
+- name: Install Headlamp and expose via Traefik
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  become: false
+  vars:
+    master_public_ip: "{{ hostvars[groups['k3s_servers'][0]].ansible_host }}"
+    headlamp_host: "{{ lookup('env', 'HEADLAMP_HOST') | default('headlamp.' + master_public_ip + '.sslip.io', true) }}"
+  pre_tasks:
+    - name: Validate KUBECONFIG is set
+      ansible.builtin.assert:
+        that:
+          - lookup('env', 'KUBECONFIG') | length > 0
+        fail_msg: >-
+          KUBECONFIG is not set. Run install-headlamp.sh or export KUBECONFIG
+          to kubeconfigs/<env>.yaml.
+
+    - name: Validate kubeconfig file exists
+      ansible.builtin.stat:
+        path: "{{ lookup('env', 'KUBECONFIG') }}"
+      register: kubeconfig_file
+
+    - name: Fail when kubeconfig file is missing
+      ansible.builtin.assert:
+        that:
+          - kubeconfig_file.stat.exists
+        fail_msg: >-
+          Kubeconfig not found. Run ./ansible/scripts/install-k3s.sh <env> first.
+
+    - name: Validate inventory has at least one K3s server
+      ansible.builtin.assert:
+        that:
+          - groups['k3s_servers'] | length > 0
+        fail_msg: >-
+          No k3s_servers in inventory. Run generate-inventory.sh <env>.
+
+    - name: Show Headlamp hostname
+      ansible.builtin.debug:
+        msg: "Headlamp URL: http://{{ headlamp_host }}"
+
+  roles:
+    - headlamp

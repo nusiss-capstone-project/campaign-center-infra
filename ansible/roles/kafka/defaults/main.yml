@@ -1,0 +1,28 @@
+---
+kafka_enabled: true
+kafka_namespace: messaging
+kafka_app_name: kafka
+kafka_image: apache/kafka:4.0.0
+
+# Cluster-internal bootstrap (no public exposure)
+kafka_service_name: kafka
+kafka_client_port: 9092
+kafka_controller_port: 9093
+kafka_bootstrap: "{{ kafka_service_name }}.{{ kafka_namespace }}.svc.cluster.local:{{ kafka_client_port }}"
+
+# Single-node KRaft (combined broker+controller, no ZooKeeper)
+kafka_node_id: 1
+kafka_cluster_id: "4L6g3nShT-eMCtK--X86sw"
+kafka_log_dirs: /var/lib/kafka/data
+kafka_storage_size: 2Gi
+
+kafka_memory_request: 512Mi
+kafka_memory_limit: 768Mi
+kafka_cpu_request: 100m
+kafka_cpu_limit: 500m
+
+# JVM heap (keep below memory limit for dev single broker)
+kafka_heap_opts: "-Xmx512m -Xms256m"
+
+# Validation topic for smoke test
+kafka_validate_topic: dev-smoke-test

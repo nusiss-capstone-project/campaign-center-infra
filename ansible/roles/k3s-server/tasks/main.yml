@@ -1,0 +1,105 @@
+---
+- name: Check if K3s server is already running
+  ansible.builtin.command: systemctl is-active k3s
+  register: k3s_service
+  changed_when: false
+  failed_when: false
+
+- name: Stat k3s binary
+  ansible.builtin.stat:
+    path: /usr/local/bin/k3s
+  register: k3s_binary
+
+- name: Persist KUBECONFIG for kubectl on server nodes
+  ansible.builtin.copy:
+    dest: /etc/profile.d/k3s-kubeconfig.sh
+    mode: "0644"
+    content: |
+      # Managed by Ansible — kubectl uses the K3s admin kubeconfig on this node
+      export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+
+- name: Skip installation when K3s server is already active
+  ansible.builtin.meta: end_host
+  when:
+    - k3s_binary.stat.exists
+    - k3s_service.stdout | default('') | trim == 'active'
+
+- name: Set base K3s server install flags
+  ansible.builtin.set_fact:
+    k3s_server_exec: >-
+      server
+      --node-ip {{ private_ip }}
+      --advertise-address {{ private_ip }}
+      --tls-san {{ ansible_host }}
+      --tls-san {{ private_ip }}
+      --disable servicelb
+
+- name: Add cluster-init for first HA server
+  ansible.builtin.set_fact:
+    k3s_server_exec: "{{ k3s_server_exec }} --cluster-init"
+  when:
+    - groups['k3s_servers'] | length > 1
+    - inventory_hostname == groups['k3s_servers'][0]
+
+- name: Add server join URL for additional HA servers
+  ansible.builtin.set_fact:
+    k3s_server_exec: "{{ k3s_server_exec }} --server https://{{ hostvars[groups['k3s_servers'][0]].private_ip }}:{{ k3s_api_port }}"
+  when:
+    - groups['k3s_servers'] | length > 1
+    - inventory_hostname != groups['k3s_servers'][0]
+
+- name: Ensure K3s config directory exists
+  ansible.builtin.file:
+    path: /etc/k3s
+    state: directory
+    mode: "0755"
+
+- name: Render K3s server environment file
+  ansible.builtin.template:
+    src: k3s-server.env.j2
+    dest: /etc/k3s/k3s-server.env
+    mode: "0600"
+
+- name: Wait for first server API before joining additional servers
+  ansible.builtin.wait_for:
+    host: "{{ hostvars[groups['k3s_servers'][0]].private_ip }}"
+    port: "{{ k3s_api_port }}"
+    timeout: 300
+  when:
+    - groups['k3s_servers'] | length > 1
+    - inventory_hostname != groups['k3s_servers'][0]
+
+- name: Read cluster token from first server for HA join
+  ansible.builtin.command: cat {{ k3s_token_file }}
+  delegate_to: "{{ groups['k3s_servers'][0] }}"
+  register: k3s_cluster_token
+  changed_when: false
+  when:
+    - groups['k3s_servers'] | length > 1
+    - inventory_hostname != groups['k3s_servers'][0]
+
+- name: Install K3s server (first / single node)
+  ansible.builtin.shell: |
+    set -euo pipefail
+    curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="{{ k3s_version }}" sh -s - {{ k3s_server_exec }}
+  args:
+    executable: /bin/bash
+  when: inventory_hostname == groups['k3s_servers'][0] or groups['k3s_servers'] | length == 1
+
+- name: Install K3s server (additional HA nodes)
+  ansible.builtin.shell: |
+    set -euo pipefail
+    curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="{{ k3s_version }}" K3S_TOKEN="{{ k3s_cluster_token.stdout | trim }}" sh -s - {{ k3s_server_exec }}
+  args:
+    executable: /bin/bash
+  when:
+    - groups['k3s_servers'] | length > 1
+    - inventory_hostname != groups['k3s_servers'][0]
+
+- name: Wait for K3s server service
+  ansible.builtin.command: systemctl is-active k3s
+  register: k3s_active_after
+  changed_when: false
+  retries: 20
+  delay: 6
+  until: k3s_active_after.stdout | trim == 'active'

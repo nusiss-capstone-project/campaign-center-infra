@@ -1,0 +1,34 @@
+apiVersion: helm.cattle.io/v1
+kind: HelmChartConfig
+metadata:
+  name: traefik
+  namespace: kube-system
+spec:
+  valuesContent: |-
+{% if traefik_exposure_mode == 'hostport' %}
+    # Dev: bind Traefik to host ports 80/443 (no random NodePorts)
+    service:
+      type: ClusterIP
+    ports:
+      web:
+        port: 8000
+        hostPort: {{ traefik_http_port }}
+        expose:
+          default: true
+      websecure:
+        port: 8443
+        hostPort: {{ traefik_https_port }}
+        expose:
+          default: true
+        tls:
+          enabled: true
+{% elif traefik_exposure_mode == 'loadbalancer' %}
+    # Production LoadBalancer mode — not implemented yet.
+    # Extend with traefik_loadbalancer_class / traefik_loadbalancer_annotations.
+    service:
+      type: LoadBalancer
+{% else %}
+    # Unsupported mode placeholder
+    service:
+      type: ClusterIP
+{% endif %}

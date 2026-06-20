@@ -1,0 +1,44 @@
+---
+- name: Skip Kafka UI installation when disabled
+  ansible.builtin.meta: end_play
+  when: not (kafka_ui_enabled | bool)
+
+- name: Check Kafka broker service exists
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Service
+    name: kafka
+    namespace: "{{ kafka_ui_namespace }}"
+  register: kafka_broker_svc
+
+- name: Fail when Kafka broker service is missing
+  ansible.builtin.assert:
+    that:
+      - kafka_broker_svc.resources | length > 0
+    fail_msg: >-
+      Service kafka not found in namespace {{ kafka_ui_namespace }}.
+      Run install-kafka.sh first.
+
+- name: Apply Kafka UI Deployment
+  kubernetes.core.k8s:
+    state: present
+    template: deployment.yaml.j2
+
+- name: Apply Kafka UI Service
+  kubernetes.core.k8s:
+    state: present
+    template: service.yaml.j2
+
+- name: Expose Kafka UI through Traefik
+  ansible.builtin.import_tasks: routing.yml
+
+- name: Wait for Kafka UI deployment to be available
+  ansible.builtin.command: >-
+    kubectl wait --for=condition=Available deployment/{{ kafka_ui_app_name }}
+    -n {{ kafka_ui_namespace }} --timeout=300s
+  environment:
+    KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+  changed_when: false
+
+- name: Run Kafka UI validation tasks
+  ansible.builtin.import_tasks: validate.yml

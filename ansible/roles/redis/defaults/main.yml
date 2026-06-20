@@ -1,0 +1,5 @@
+---
+# Placeholder — future: Bitnami Redis Helm chart in namespace `data`
+redis_enabled: false
+redis_namespace: data
+redis_release_name: redis

@@ -1,0 +1,21 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: {{ headlamp_ingressroute_name }}
+  namespace: {{ headlamp_namespace }}
+spec:
+{% if headlamp_tls_enabled | bool %}
+  entryPoints:
+    - websecure
+  tls:
+    secretName: {{ headlamp_ingressroute_name }}-tls
+{% else %}
+  entryPoints:
+    - {{ headlamp_traefik_entrypoint }}
+{% endif %}
+  routes:
+    - match: Host(`{{ headlamp_host }}`)
+      kind: Rule
+      services:
+        - name: {{ headlamp_service_name }}
+          port: {{ headlamp_service_port }}

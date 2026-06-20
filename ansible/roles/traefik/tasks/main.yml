@@ -1,0 +1,13 @@
+---
+- name: Validate prerequisites
+  ansible.builtin.import_tasks: validate.yml
+
+- name: Configure Traefik exposure
+  ansible.builtin.import_tasks: "exposure-{{ traefik_exposure_mode }}.yml"
+
+- name: Show Traefik exposure summary
+  ansible.builtin.debug:
+    msg:
+      - "Traefik exposure configured: {{ traefik_exposure_mode }}"
+      - "Host ports: HTTP {{ traefik_http_port }}, HTTPS {{ traefik_https_port }}"
+      - "Application IngressRoutes are managed by each app role (e.g. headlamp)."

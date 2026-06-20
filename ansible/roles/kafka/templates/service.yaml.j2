@@ -1,0 +1,36 @@
+# Headless service — stable pod DNS for KRaft controller quorum (kafka-0.kafka-headless...)
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ kafka_app_name }}-headless
+  namespace: {{ kafka_namespace }}
+  labels:
+    app.kubernetes.io/name: {{ kafka_app_name }}
+    app.kubernetes.io/component: broker
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector:
+    app.kubernetes.io/name: {{ kafka_app_name }}
+  ports:
+    - name: controller
+      port: {{ kafka_controller_port }}
+      targetPort: {{ kafka_controller_port }}
+---
+# ClusterIP — in-cluster client bootstrap (not exposed via Traefik/NodePort)
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ kafka_service_name }}
+  namespace: {{ kafka_namespace }}
+  labels:
+    app.kubernetes.io/name: {{ kafka_app_name }}
+    app.kubernetes.io/component: broker
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: {{ kafka_app_name }}
+  ports:
+    - name: plaintext
+      port: {{ kafka_client_port }}
+      targetPort: {{ kafka_client_port }}

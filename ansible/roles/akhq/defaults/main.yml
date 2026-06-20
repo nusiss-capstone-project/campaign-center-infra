@@ -1,0 +1,5 @@
+---
+# Placeholder — future: AKHQ Kafka UI + Traefik IngressRoute (like Headlamp)
+akhq_enabled: false
+akhq_namespace: messaging
+akhq_release_name: akhq

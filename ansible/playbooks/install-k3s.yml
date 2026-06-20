@@ -1,0 +1,52 @@
+---
+- name: Prepare all K3s nodes
+  hosts: all
+  gather_facts: true
+  roles:
+    - common
+
+- name: Install K3s server nodes
+  hosts: k3s_servers
+  serial: 1
+  roles:
+    - k3s-server
+
+- name: Install K3s agent nodes
+  hosts: k3s_agents
+  roles:
+    - k3s-agent
+
+- name: Fetch kubeconfig to local machine
+  hosts: k3s_servers
+  gather_facts: false
+  run_once: true
+  tasks:
+    - name: Read kubeconfig from first server
+      ansible.builtin.slurp:
+        src: /etc/rancher/k3s/k3s.yaml
+      register: k3s_kubeconfig_raw
+
+    - name: Ensure local kubeconfigs directory exists
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/../../kubeconfigs"
+        state: directory
+        mode: "0755"
+      delegate_to: localhost
+      become: false
+
+    - name: Write kubeconfig with public API endpoint
+      ansible.builtin.copy:
+        content: "{{ k3s_kubeconfig_raw.content | b64decode | regex_replace('127.0.0.1', hostvars[groups['k3s_servers'][0]].ansible_host) }}"
+        dest: "{{ playbook_dir }}/../../kubeconfigs/{{ k3s_env | default('dev') }}.yaml"
+        mode: "0600"
+      delegate_to: localhost
+      become: false
+
+    - name: Print kubeconfig usage
+      ansible.builtin.debug:
+        msg:
+          - "Kubeconfig written to kubeconfigs/{{ k3s_env | default('dev') }}.yaml"
+          - "export KUBECONFIG=$(pwd)/kubeconfigs/{{ k3s_env | default('dev') }}.yaml"
+          - "kubectl get nodes"
+      delegate_to: localhost
+      become: false

@@ -1,0 +1,26 @@
+---
+headlamp_namespace: headlamp
+headlamp_release_name: headlamp
+headlamp_service_name: headlamp
+headlamp_service_port: 80
+headlamp_helm_repo_url: https://kubernetes-sigs.github.io/headlamp/
+
+# Computed in playbook from inventory / HEADLAMP_HOST
+headlamp_host: ""
+
+# Dev login: create a ServiceAccount token (Kubernetes-native auth, no external IAM)
+headlamp_create_dev_sa: true
+headlamp_dev_sa_name: headlamp-dev
+headlamp_dev_cluster_role: cluster-admin
+
+# Remove legacy Rancher resources when migrating (safe to re-run)
+headlamp_cleanup_rancher: true
+
+# cert-manager was used by Rancher; remove if no longer needed (reduces webhook load)
+headlamp_cleanup_cert_manager: true
+
+
+# Reusable Traefik IngressRoute pattern — copy for Grafana, AKHQ, RedisInsight, CloudBeaver
+headlamp_ingressroute_name: headlamp
+headlamp_traefik_entrypoint: web
+headlamp_tls_enabled: false

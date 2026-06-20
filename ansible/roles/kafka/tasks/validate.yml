@@ -1,0 +1,61 @@
+---
+- name: Get Kafka pods
+  ansible.builtin.command: kubectl get pods -n {{ kafka_namespace }}
+  environment:
+    KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+  register: kafka_pods
+  changed_when: false
+
+- name: Get Kafka services
+  ansible.builtin.command: kubectl get svc -n {{ kafka_namespace }}
+  environment:
+    KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+  register: kafka_svc
+  changed_when: false
+
+- name: Fetch Kafka broker logs (tail)
+  ansible.builtin.command: >-
+    kubectl logs -n {{ kafka_namespace }} statefulset/{{ kafka_app_name }} --tail=30
+  environment:
+    KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+  register: kafka_logs
+  changed_when: false
+
+- name: Create validation topic
+  ansible.builtin.command: >-
+    kubectl exec -n {{ kafka_namespace }} {{ kafka_app_name }}-0 --
+    /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:{{ kafka_client_port }}
+    --create --if-not-exists --topic {{ kafka_validate_topic }}
+    --partitions 1 --replication-factor 1
+  environment:
+    KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+  register: kafka_topic_create
+  changed_when: "'Created topic' in kafka_topic_create.stdout"
+  failed_when: false
+
+- name: List Kafka topics
+  ansible.builtin.command: >-
+    kubectl exec -n {{ kafka_namespace }} {{ kafka_app_name }}-0 --
+    /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:{{ kafka_client_port }} --list
+  environment:
+    KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+  register: kafka_topic_list
+  changed_when: false
+
+- name: Print Kafka validation summary
+  ansible.builtin.debug:
+    msg:
+      - "Kafka validation"
+      - "Bootstrap (in-cluster): {{ kafka_bootstrap }}"
+      - ""
+      - "kubectl get pods -n {{ kafka_namespace }}:"
+      - "{{ kafka_pods.stdout_lines }}"
+      - ""
+      - "kubectl get svc -n {{ kafka_namespace }}:"
+      - "{{ kafka_svc.stdout_lines }}"
+      - ""
+      - "Topics:"
+      - "{{ kafka_topic_list.stdout_lines | default(['skipped']) }}"
+      - ""
+      - "Broker logs (last 30 lines):"
+      - "{{ kafka_logs.stdout_lines | default(['skipped']) }}"

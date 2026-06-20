@@ -1,0 +1,28 @@
+# Copy this file to environments/dev/backend.tf and adjust values for your OSS remote state bucket.
+#
+# Example:
+#   cp backend.tf.example environments/dev/backend.tf
+#
+# Create the OSS bucket and a DynamoDB-style lock table is not required for OSS;
+# Terraform OSS backend uses native object locking when supported.
+
+terraform {
+  backend "oss" {
+    bucket              = "campaign-center-tf-state" # TODO: replace with your OSS bucket name
+    prefix              = "campaign-center-infra"
+    key                 = "terraform.tfstate" # path inside the bucket
+    region              = "ap-southeast-1"    # TODO: OSS bucket region
+    encrypt             = true
+
+    # Optional: use a RAM user access key for backend authentication.
+    # Prefer environment variables when possible:
+    #   ALICLOUD_ACCESS_KEY
+    #   ALICLOUD_SECRET_KEY
+    #
+    # access_key = ""
+    # secret_key = ""
+    #
+    # Optional tablestore endpoint for state locking:
+    # tablestore_endpoint = "https://campaign-center-lock.ap-southeast-1.ots.aliyuncs.com"
+  }
+}

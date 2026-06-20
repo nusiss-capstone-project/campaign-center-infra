@@ -1,0 +1,60 @@
+---
+- name: Get Kafka UI pods
+  ansible.builtin.command: kubectl get pods -n {{ kafka_ui_namespace }} -l app.kubernetes.io/name={{ kafka_ui_app_name }}
+  environment:
+    KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+  register: kafka_ui_pods
+  changed_when: false
+
+- name: Get Kafka UI services
+  ansible.builtin.command: kubectl get svc -n {{ kafka_ui_namespace }} {{ kafka_ui_service_name }}
+  environment:
+    KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+  register: kafka_ui_svc
+  changed_when: false
+
+- name: Describe Kafka UI IngressRoute
+  ansible.builtin.command: >-
+    kubectl describe ingressroute {{ kafka_ui_ingressroute_name }}
+    -n {{ kafka_ui_namespace }}
+  environment:
+    KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+  register: kafka_ui_ingressroute
+  changed_when: false
+
+- name: Fetch Kafka UI logs (tail)
+  ansible.builtin.command: >-
+    kubectl logs -n {{ kafka_ui_namespace }} deployment/{{ kafka_ui_app_name }} --tail=20
+  environment:
+    KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+  register: kafka_ui_logs
+  changed_when: false
+
+- name: Curl Kafka UI via Traefik HTTP entrypoint
+  ansible.builtin.command: >-
+    curl -sS -o /dev/null -w '%{http_code}'
+    -H 'Host: {{ kafka_ui_host }}'
+    http://{{ master_public_ip }}:{{ traefik_http_port }}/actuator/health
+  register: kafka_ui_curl
+  changed_when: false
+  when: master_public_ip is defined and master_public_ip | length > 0
+
+- name: Print Kafka UI validation summary
+  ansible.builtin.debug:
+    msg:
+      - "Kafka UI validation"
+      - "URL: http://{{ kafka_ui_host }}"
+      - "Curl HTTP status (via Traefik): {{ kafka_ui_curl.stdout | default('skipped') }}"
+      - "Kafka bootstrap: {{ kafka_ui_bootstrap_servers }}"
+      - ""
+      - "kubectl get pods -n {{ kafka_ui_namespace }} (kafka-ui):"
+      - "{{ kafka_ui_pods.stdout_lines }}"
+      - ""
+      - "kubectl get svc -n {{ kafka_ui_namespace }}:"
+      - "{{ kafka_ui_svc.stdout_lines }}"
+      - ""
+      - "IngressRoute:"
+      - "{{ kafka_ui_ingressroute.stdout_lines[:15] }}"
+      - ""
+      - "Logs (last 20 lines):"
+      - "{{ kafka_ui_logs.stdout_lines | default(['skipped']) }}"

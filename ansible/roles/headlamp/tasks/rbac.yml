@@ -1,0 +1,15 @@
+---
+- name: Create Headlamp dev ServiceAccount for token login
+  kubernetes.core.k8s:
+    state: present
+    template: dev-serviceaccount.yaml.j2
+  when: headlamp_create_dev_sa | bool
+
+- name: Generate login token command hint
+  ansible.builtin.debug:
+    msg:
+      - "Login to Headlamp with a Kubernetes service account token:"
+      - "  kubectl -n {{ headlamp_namespace }} create token {{ headlamp_dev_sa_name }}"
+      - "Paste the token in the Headlamp UI (Authenticate)."
+      - "Dev only: SA is bound to {{ headlamp_dev_cluster_role }}."
+  when: headlamp_create_dev_sa | bool

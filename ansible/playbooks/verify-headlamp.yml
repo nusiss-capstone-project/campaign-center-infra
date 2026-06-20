@@ -1,0 +1,84 @@
+---
+- name: Verify Headlamp installation and Traefik routing
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  become: false
+  vars:
+    master_public_ip: "{{ hostvars[groups['k3s_servers'][0]].ansible_host }}"
+    headlamp_host: "{{ lookup('env', 'HEADLAMP_HOST') | default('headlamp.' + master_public_ip + '.sslip.io', true) }}"
+    headlamp_namespace: headlamp
+    traefik_http_port: 80
+  tasks:
+    - name: Get all pods
+      ansible.builtin.command: kubectl get pods -A
+      environment:
+        KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+      register: all_pods
+      changed_when: false
+
+    - name: Get all services
+      ansible.builtin.command: kubectl get svc -A
+      environment:
+        KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+      register: all_svc
+      changed_when: false
+
+    - name: Get Ingress resources
+      ansible.builtin.command: kubectl get ingress -A
+      environment:
+        KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+      register: ingress_list
+      changed_when: false
+
+    - name: Get IngressRoute resources
+      ansible.builtin.command: kubectl get ingressroute -A
+      environment:
+        KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+      register: ingressroute_list
+      changed_when: false
+
+    - name: Wait for Headlamp pods to be ready
+      ansible.builtin.command: kubectl wait --for=condition=Ready pods --all -n {{ headlamp_namespace }} --timeout=120s
+      environment:
+        KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+      changed_when: false
+
+    - name: Describe Headlamp IngressRoute
+      ansible.builtin.command: kubectl describe ingressroute headlamp -n {{ headlamp_namespace }}
+      environment:
+        KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+      register: ingressroute_describe
+      changed_when: false
+
+    - name: Curl Headlamp via Traefik HTTP entrypoint
+      ansible.builtin.command: >-
+        curl -sS -o /dev/null -w '%{http_code}'
+        -H 'Host: {{ headlamp_host }}'
+        http://{{ master_public_ip }}:{{ traefik_http_port }}/
+      register: curl_http
+      changed_when: false
+
+    - name: Print Headlamp verification summary
+      ansible.builtin.debug:
+        msg:
+          - "Headlamp verification"
+          - "URL: http://{{ headlamp_host }}"
+          - "Curl HTTP status (via Traefik): {{ curl_http.stdout }}"
+          - ""
+          - "Login: open URL → Authenticate → paste token from:"
+          - "  kubectl -n {{ headlamp_namespace }} create token headlamp-dev"
+          - ""
+          - "kubectl get pods -A (head excerpt):"
+          - "{{ all_pods.stdout_lines[:20] }}"
+          - ""
+          - "kubectl get ingressroute -A:"
+          - "{{ ingressroute_list.stdout_lines }}"
+          - ""
+          - "kubectl get svc -A (head excerpt):"
+          - "{{ all_svc.stdout_lines[:20] }}"
+          - ""
+          - "Troubleshooting:"
+          - "  kubectl describe ingressroute headlamp -n {{ headlamp_namespace }}"
+          - "  kubectl get pods -n {{ headlamp_namespace }}"
+          - "  curl -v -H 'Host: {{ headlamp_host }}' http://{{ master_public_ip }}/"

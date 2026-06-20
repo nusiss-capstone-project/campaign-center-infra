@@ -1,0 +1,53 @@
+---
+- name: Verify Traefik exposure
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  become: false
+  vars:
+    master_public_ip: "{{ hostvars[groups['k3s_servers'][0]].ansible_host }}"
+    traefik_http_port: 80
+  tasks:
+    - name: Get Traefik service
+      ansible.builtin.command: kubectl get svc -n kube-system traefik
+      environment:
+        KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+      register: traefik_svc
+      changed_when: false
+
+    - name: Get Traefik pods
+      ansible.builtin.shell: kubectl get pods -n kube-system | grep traefik || true
+      environment:
+        KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+      register: traefik_pods
+      changed_when: false
+
+    - name: Get IngressRoute resources
+      ansible.builtin.command: kubectl get ingressroute -A
+      environment:
+        KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+      register: ingressroute_list
+      changed_when: false
+
+    - name: Check host ports 80/443 on K3s master
+      ansible.builtin.shell: ss -lntp | grep -E ':80|:443' || true
+      delegate_to: "{{ groups['k3s_servers'][0] }}"
+      register: host_ports
+      changed_when: false
+
+    - name: Print Traefik verification summary
+      ansible.builtin.debug:
+        msg:
+          - "Traefik verification (dev hostPort mode)"
+          - ""
+          - "kubectl get svc -n kube-system traefik:"
+          - "{{ traefik_svc.stdout_lines }}"
+          - ""
+          - "Traefik pods:"
+          - "{{ traefik_pods.stdout_lines }}"
+          - ""
+          - "Host port listeners on master (ss -lntp):"
+          - "{{ host_ports.stdout_lines }}"
+          - ""
+          - "kubectl get ingressroute -A:"
+          - "{{ ingressroute_list.stdout_lines }}"
