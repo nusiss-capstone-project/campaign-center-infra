@@ -1,0 +1,26 @@
+# Checkov configuration — https://www.checkov.io/2.Basics/CLI%20Command%20Reference.html
+branch: main
+compact: true
+quiet: false
+evaluate-variables: true
+
+framework:
+  - terraform
+  - kubernetes
+  - ansible
+  - github_actions
+
+skip-path:
+  # Generated / local-only paths
+  - kubeconfigs
+  - ansible/inventories
+  - .terraform
+  # Legacy duplicate Terraform tree at repo root (canonical: terraform/)
+  - environments
+  - modules
+  # Jinja2 templates are rendered by Ansible; scan Terraform + static YAML instead
+  - "**/*.j2"
+
+# Add check IDs here when a finding is accepted for dev with documented rationale.
+# Example: CKV_ALI_xxx — open HTTP/HTTPS on dev EIP for Traefik hostPort
+skip-check: []

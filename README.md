@@ -48,6 +48,7 @@ Rancher was removed from the dev environment. On a single-node K3s cluster it ca
 │   │   ├── akhq/             # placeholder
 │   │   └── monitoring/       # placeholder (Grafana, etc.)
 │   └── scripts/              # Wrapper scripts
+├── .github/workflows/        # CI (Checkov security scan)
 ├── kubeconfigs/              # Fetched kubeconfig files (gitignored)
 ├── scripts/                  # Terraform fmt / validate helpers
 └── docs/
@@ -358,6 +359,27 @@ Traefik exposure (`install-traefik.sh`) stays separate from app routing (`instal
 | Local laptop cannot connect to Kafka | Use `kubectl port-forward` or exec CLI inside `kafka-0`; advertised listener is cluster DNS |
 | Kafka UI 404 / unreachable | Run `install-traefik.sh` then `install-kafka-ui.sh`; `kubectl describe ingressroute kafka-ui -n messaging` |
 | Kafka UI shows no brokers | Ensure Kafka broker is Running; check `kafka_ui_bootstrap_servers` in role defaults |
+
+## CI / security scanning
+
+[Checkov](https://www.checkov.io/) runs on pull requests and pushes to `main`/`master` when `terraform/` or `ansible/` changes.
+
+| Scan target | Path |
+| ----------- | ---- |
+| Terraform (Alibaba Cloud) | `terraform/` |
+| Ansible playbooks / roles | `ansible/` |
+| GitHub Actions | `.github/workflows/` |
+
+Configuration: [`.checkov.yaml`](.checkov.yaml). Jinja2 templates (`*.j2`) are skipped (rendered at deploy time). To suppress a known dev finding, add its check ID to `skip-check` in `.checkov.yaml` with a comment explaining why.
+
+**Run locally**
+
+```bash
+pip install checkov
+checkov -d . --config-file .checkov.yaml
+```
+
+SARIF results are uploaded to GitHub **Code scanning** when available (requires GitHub Advanced Security on private repos).
 
 ## Documentation
 
