@@ -1,0 +1,75 @@
+---
+- name: Skip External Secrets installation when disabled
+  ansible.builtin.meta: end_play
+  when: not (external_secrets_enabled | bool)
+
+- name: Check Vault service exists
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Service
+    name: vault
+    namespace: "{{ vault_namespace }}"
+  register: vault_service
+
+- name: Fail when Vault service is missing
+  ansible.builtin.assert:
+    that:
+      - vault_service.resources | length > 0
+    fail_msg: >-
+      Service vault not found in namespace {{ vault_namespace }}.
+      Run install-vault.sh first.
+
+- name: Add External Secrets Helm repository
+  kubernetes.core.helm_repository:
+    name: external-secrets
+    repo_url: "{{ external_secrets_helm_repo_url }}"
+
+- name: Render External Secrets Helm values
+  ansible.builtin.template:
+    src: external-secrets-values.yaml.j2
+    dest: "/tmp/external-secrets-values-{{ external_secrets_release_name }}.yaml"
+    mode: "0600"
+
+- name: Install External Secrets Operator (CRDs, controller, webhook)
+  kubernetes.core.helm:
+    name: "{{ external_secrets_release_name }}"
+    chart_ref: external-secrets/external-secrets
+    release_namespace: "{{ external_secrets_namespace }}"
+    create_namespace: true
+    wait: true
+    wait_timeout: 10m
+    update_repo_cache: true
+    values_files:
+      - "/tmp/external-secrets-values-{{ external_secrets_release_name }}.yaml"
+
+- name: Create External Secrets Vault authentication ServiceAccount
+  kubernetes.core.k8s:
+    state: present
+    template: vault-serviceaccount.yaml.j2
+
+- name: Apply ClusterSecretStore for Vault backend
+  kubernetes.core.k8s:
+    state: present
+    template: clustersecretstore.yaml.j2
+
+- name: Wait for External Secrets deployment to be available
+  ansible.builtin.command: >-
+    kubectl wait --for=condition=Available deployment/{{ external_secrets_release_name }}
+    -n {{ external_secrets_namespace }} --timeout=300s
+  environment:
+    KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+  changed_when: false
+
+- name: Show External Secrets summary
+  ansible.builtin.debug:
+    msg:
+      - "External Secrets Operator installed"
+      - "ClusterSecretStore: {{ external_secrets_cluster_store_name }}"
+      - "Vault server: {{ vault_server_url }}"
+      - "Vault auth role: {{ external_secrets_vault_auth_role }}"
+      - ""
+      - "ClusterSecretStore becomes Ready after vault-bootstrap.sh configures Kubernetes auth."
+      - "GitOps repos should reference ClusterSecretStore {{ external_secrets_cluster_store_name }}."
+
+- name: Run External Secrets validation tasks
+  ansible.builtin.import_tasks: validate.yml

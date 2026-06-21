@@ -1,0 +1,135 @@
+---
+- name: Skip Vault ingress when disabled
+  ansible.builtin.meta: end_host
+  when: not (vault_ingress_enabled | bool)
+
+- name: Check Traefik IngressClass exists
+  kubernetes.core.k8s_info:
+    api_version: networking.k8s.io/v1
+    kind: IngressClass
+    name: "{{ vault_ingress_class_name }}"
+  register: vault_ingress_class
+
+- name: Fail when Traefik IngressClass is missing
+  ansible.builtin.assert:
+    that:
+      - vault_ingress_class.resources | length > 0
+    fail_msg: >-
+      IngressClass {{ vault_ingress_class_name }} not found. Run install-traefik.sh first.
+
+- name: Detect cert-manager CRD
+  kubernetes.core.k8s_info:
+    api_version: apiextensions.k8s.io/v1
+    kind: CustomResourceDefinition
+    name: certificates.cert-manager.io
+  register: vault_cert_manager_crd
+
+- name: Set Vault ingress TLS facts
+  ansible.builtin.set_fact:
+    vault_ingress_cert_manager_available: "{{ vault_cert_manager_crd.resources | length > 0 }}"
+    vault_ingress_use_cert_manager: >-
+      {{
+        (vault_cert_manager_crd.resources | length > 0)
+        and (vault_ingress_tls_auto | bool)
+        and (vault_ingress_cluster_issuer | length > 0)
+      }}
+    vault_ingress_use_tls_secret: "{{ vault_ingress_tls_secret_name | length > 0 }}"
+    vault_ingress_tls_enabled: >-
+      {{
+        (
+          (vault_cert_manager_crd.resources | length > 0)
+          and (vault_ingress_tls_auto | bool)
+          and (vault_ingress_cluster_issuer | length > 0)
+        )
+        or (vault_ingress_tls_secret_name | length > 0)
+      }}
+
+- name: Fail when ingress enabled without TLS
+  ansible.builtin.assert:
+    that:
+      - vault_ingress_tls_enabled | bool
+    fail_msg: >-
+      Vault ingress requires HTTPS. Install cert-manager and set vault_ingress_cluster_issuer,
+      or provide vault_ingress_tls_secret_name with a TLS secret in namespace {{ vault_namespace }}.
+
+- name: Fail when ingress enabled without access control
+  ansible.builtin.assert:
+    that:
+      - vault_ingress_auth_mode in ['basicauth', 'ipallowlist', 'both']
+      - vault_ingress_auth_mode != 'basicauth' or (vault_ingress_basic_auth_password | length > 0)
+      - vault_ingress_auth_mode != 'ipallowlist' or (vault_ingress_ip_allowlist | length > 0)
+      - >-
+        vault_ingress_auth_mode != 'both'
+        or (
+          (vault_ingress_basic_auth_password | length > 0)
+          and (vault_ingress_ip_allowlist | length > 0)
+        )
+    fail_msg: >-
+      Vault ingress requires access control. Set VAULT_INGRESS_BASIC_AUTH_PASSWORD for basicauth,
+      VAULT_INGRESS_IP_ALLOWLIST (comma-separated CIDRs) for ipallowlist, or both for auth mode 'both'.
+
+- name: Build htpasswd entry for BasicAuth secret
+  ansible.builtin.shell: |
+    set -euo pipefail
+    hash="$(openssl passwd -apr1 "${VAULT_INGRESS_PASSWORD}")"
+    printf '%s:%s' "{{ vault_ingress_basic_auth_username }}" "${hash}"
+  environment:
+    VAULT_INGRESS_PASSWORD: "{{ vault_ingress_basic_auth_password }}"
+  register: vault_htpasswd_result
+  no_log: true
+  changed_when: false
+  when: vault_ingress_auth_mode in ['basicauth', 'both']
+
+- name: Set htpasswd users fact
+  ansible.builtin.set_fact:
+    vault_ingress_htpasswd_users: "{{ vault_htpasswd_result.stdout | trim }}"
+  no_log: true
+  when: vault_ingress_auth_mode in ['basicauth', 'both']
+
+- name: Apply Vault ingress BasicAuth secret
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: "{{ vault_ingress_basicauth_secret_name }}"
+        namespace: "{{ vault_namespace }}"
+        labels:
+          app.kubernetes.io/name: vault
+          app.kubernetes.io/component: ingress-auth
+      type: Opaque
+      stringData:
+        users: "{{ vault_ingress_htpasswd_users }}"
+  no_log: true
+  when: vault_ingress_auth_mode in ['basicauth', 'both']
+
+- name: Apply Vault BasicAuth Traefik Middleware
+  kubernetes.core.k8s:
+    state: present
+    template: middleware-basicauth.yaml.j2
+  when: vault_ingress_auth_mode in ['basicauth', 'both']
+
+- name: Apply Vault IP allowlist Traefik Middleware
+  kubernetes.core.k8s:
+    state: present
+    template: middleware-ipallowlist.yaml.j2
+  when: vault_ingress_auth_mode in ['ipallowlist', 'both']
+
+- name: Apply Vault UI Ingress
+  kubernetes.core.k8s:
+    state: present
+    template: ingress.yaml.j2
+
+- name: Show Vault ingress summary
+  ansible.builtin.debug:
+    msg:
+      - "Vault UI exposed via Traefik Ingress (HTTPS + access control)"
+      - "URL: https://{{ vault_ingress_host }}/ui"
+      - "IngressClass: {{ vault_ingress_class_name }}"
+      - "Backend: {{ vault_service_name }}.{{ vault_namespace }}:{{ vault_api_port }} (ClusterIP unchanged)"
+      - "TLS: {{ 'cert-manager (' + vault_ingress_cluster_issuer + ')' if vault_ingress_use_cert_manager else 'secret ' + vault_ingress_tls_secret_name }}"
+      - "Auth: {{ vault_ingress_auth_mode }}"
+      - ""
+      - "DNS: point {{ vault_ingress_host }} to your Traefik public IP"
+      - "BasicAuth user: {{ vault_ingress_basic_auth_username }}"

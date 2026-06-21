@@ -1,0 +1,21 @@
+---
+- name: Verify Argo CD installation
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  become: false
+  vars:
+    master_public_ip: "{{ hostvars[groups['k3s_servers'][0]].ansible_host }}"
+    argocd_host: "{{ lookup('env', 'ARGOCD_HOST') | default('argocd.' + master_public_ip + '.sslip.io', true) }}"
+  pre_tasks:
+    - name: Validate KUBECONFIG is set
+      ansible.builtin.assert:
+        that:
+          - lookup('env', 'KUBECONFIG') | length > 0
+        fail_msg: >-
+          KUBECONFIG is not set. Run install-argocd.sh or export KUBECONFIG
+          to kubeconfigs/<env>.yaml.
+
+  roles:
+    - role: argocd
+      tasks_from: validate.yml

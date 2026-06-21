@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install full dev platform stack: Traefik → Headlamp → Kafka → Kafka UI
+# Install full dev platform stack: Traefik → Headlamp → Kafka → Kafka UI → Argo CD
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -10,7 +10,7 @@ usage() {
   echo "Usage: $(basename "$0") <env>"
   echo ""
   echo "Requires K3s already installed (install-k3s.sh)."
-  echo "Runs: Traefik config → Headlamp → Kafka → Kafka UI"
+  echo "Runs: Traefik config → Headlamp → Kafka → Kafka UI → Argo CD"
   echo ""
   echo "Example: $(basename "$0") dev"
   exit 1
@@ -31,6 +31,7 @@ export KUBECONFIG="${KUBECONFIG_PATH}"
 "${SCRIPT_DIR}/install-headlamp.sh" "${ENV}"
 "${SCRIPT_DIR}/install-kafka.sh" "${ENV}"
 "${SCRIPT_DIR}/install-kafka-ui.sh" "${ENV}"
+"${SCRIPT_DIR}/install-argocd.sh" "${ENV}"
 
 echo ""
 echo "Platform stack installed for env=${ENV}"

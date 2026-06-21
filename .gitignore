@@ -48,3 +48,6 @@ planout
 ansible/inventories/*/hosts.yml
 kubeconfigs/*.yaml
 !kubeconfigs/.gitkeep
+
+# Vault init keys (never commit)
+vault-keys/

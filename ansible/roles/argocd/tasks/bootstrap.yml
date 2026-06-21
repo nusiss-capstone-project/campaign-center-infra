@@ -1,0 +1,16 @@
+---
+- name: Apply root Application (app-of-apps)
+  kubernetes.core.k8s:
+    state: present
+    template: campaign-gitops-root.yaml.j2
+
+- name: Wait for root Application CR to exist
+  ansible.builtin.command: >-
+    kubectl get application {{ argocd_root_app_name }} -n {{ argocd_namespace }}
+  environment:
+    KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+  register: argocd_root_app_check
+  until: argocd_root_app_check.rc == 0
+  retries: 12
+  delay: 5
+  changed_when: false

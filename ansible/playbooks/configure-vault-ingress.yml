@@ -1,0 +1,40 @@
+---
+- name: Configure Vault UI Traefik Ingress
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  become: false
+  vars:
+    vault_ingress_enabled: true
+    vault_ingress_host: "{{ lookup('env', 'VAULT_INGRESS_HOST') | default('vault.dev.example.com', true) }}"
+    vault_ingress_basic_auth_password: "{{ lookup('env', 'VAULT_INGRESS_BASIC_AUTH_PASSWORD') | default('', true) }}"
+    vault_ingress_cluster_issuer: "{{ lookup('env', 'VAULT_INGRESS_CLUSTER_ISSUER') | default('', true) }}"
+    vault_ingress_auth_mode: "{{ lookup('env', 'VAULT_INGRESS_AUTH_MODE') | default('basicauth', true) }}"
+    vault_ingress_tls_secret_name: "{{ lookup('env', 'VAULT_INGRESS_TLS_SECRET') | default('vault-ingress-tls', true) }}"
+    vault_ingress_ip_allowlist: >-
+      {{
+        lookup('env', 'VAULT_INGRESS_IP_ALLOWLIST').split(',') | map('trim') | select('length') | list
+        if lookup('env', 'VAULT_INGRESS_IP_ALLOWLIST') | length > 0 else []
+      }}
+  pre_tasks:
+    - name: Validate KUBECONFIG is set
+      ansible.builtin.assert:
+        that:
+          - lookup('env', 'KUBECONFIG') | length > 0
+        fail_msg: >-
+          KUBECONFIG is not set. Export KUBECONFIG to kubeconfigs/<env>.yaml.
+
+    - name: Validate kubeconfig file exists
+      ansible.builtin.stat:
+        path: "{{ lookup('env', 'KUBECONFIG') }}"
+      register: kubeconfig_file
+
+    - name: Fail when kubeconfig file is missing
+      ansible.builtin.assert:
+        that:
+          - kubeconfig_file.stat.exists
+        fail_msg: Kubeconfig not found.
+
+  roles:
+    - role: vault
+      tasks_from: ingress.yml

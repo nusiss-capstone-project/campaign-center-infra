@@ -1,0 +1,75 @@
+---
+- name: Skip Argo CD installation when disabled
+  ansible.builtin.meta: end_play
+  when: not (argocd_enabled | bool)
+
+- name: Check Traefik IngressClass exists
+  kubernetes.core.k8s_info:
+    api_version: networking.k8s.io/v1
+    kind: IngressClass
+    name: "{{ argocd_ingress_class_name }}"
+  register: argocd_ingress_class
+
+- name: Fail when Traefik IngressClass is missing
+  ansible.builtin.assert:
+    that:
+      - argocd_ingress_class.resources | length > 0
+    fail_msg: >-
+      IngressClass {{ argocd_ingress_class_name }} not found. Run install-traefik.sh first.
+
+- name: Validate argocd_host is set
+  ansible.builtin.assert:
+    that:
+      - argocd_host | length > 0
+    fail_msg: >-
+      argocd_host is empty. Set ARGOCD_HOST or ensure inventory has a master public IP.
+
+- name: Add Argo Helm repository
+  kubernetes.core.helm_repository:
+    name: argo
+    repo_url: "{{ argocd_helm_repo_url }}"
+
+- name: Render Argo CD Helm values
+  ansible.builtin.template:
+    src: values.yaml.j2
+    dest: "/tmp/argocd-values-{{ argocd_release_name }}.yaml"
+    mode: "0600"
+
+- name: Install Argo CD
+  kubernetes.core.helm:
+    name: "{{ argocd_release_name }}"
+    chart_ref: argo/argo-cd
+    release_namespace: "{{ argocd_namespace }}"
+    create_namespace: true
+    wait: true
+    wait_timeout: 10m
+    update_repo_cache: true
+    values_files:
+      - "/tmp/argocd-values-{{ argocd_release_name }}.yaml"
+
+- name: Wait for Argo CD server to be available
+  ansible.builtin.command: >-
+    kubectl wait --for=condition=Available deployment/{{ argocd_release_name }}-server
+    -n {{ argocd_namespace }} --timeout=600s
+  environment:
+    KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+  changed_when: false
+
+- name: Bootstrap root GitOps Application
+  ansible.builtin.import_tasks: bootstrap.yml
+  when: argocd_bootstrap_root_app | bool
+
+- name: Show Argo CD access summary
+  ansible.builtin.debug:
+    msg:
+      - "Argo CD installed (namespace {{ argocd_namespace }})"
+      - "UI: https://{{ argocd_host }}"
+      - "Login user: admin"
+      - "Initial password:"
+      - "  kubectl -n {{ argocd_namespace }} get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d"
+      - ""
+      - "Root Application: {{ argocd_root_app_name }} → {{ argocd_gitops_repo_url }} ({{ argocd_gitops_target_revision }}/{{ argocd_gitops_path }})"
+      - "Private repo credentials: see ansible/roles/argocd/templates/repository-secret.example.yaml.j2"
+
+- name: Run Argo CD validation tasks
+  ansible.builtin.import_tasks: validate.yml

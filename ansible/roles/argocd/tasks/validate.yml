@@ -1,0 +1,48 @@
+---
+- name: Get Argo CD pods
+  ansible.builtin.command: kubectl get pods -n {{ argocd_namespace }}
+  environment:
+    KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+  register: argocd_pods
+  changed_when: false
+
+- name: Get Argo CD ingress
+  ansible.builtin.command: kubectl get ingress -n {{ argocd_namespace }}
+  environment:
+    KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+  register: argocd_ingress
+  changed_when: false
+
+- name: Get Argo CD Applications
+  ansible.builtin.command: kubectl get applications -n {{ argocd_namespace }}
+  environment:
+    KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+  register: argocd_applications
+  changed_when: false
+  failed_when: false
+
+- name: Check initial admin secret exists
+  ansible.builtin.command: >-
+    kubectl get secret argocd-initial-admin-secret -n {{ argocd_namespace }}
+  environment:
+    KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+  register: argocd_admin_secret
+  changed_when: false
+  failed_when: false
+
+- name: Print Argo CD validation summary
+  ansible.builtin.debug:
+    msg:
+      - "Argo CD validation"
+      - "UI: https://{{ argocd_host }}"
+      - ""
+      - "Pods:"
+      - "{{ argocd_pods.stdout_lines }}"
+      - ""
+      - "Ingress:"
+      - "{{ argocd_ingress.stdout_lines }}"
+      - ""
+      - "Applications:"
+      - "{{ argocd_applications.stdout_lines | default(['none yet']) }}"
+      - ""
+      - "Admin secret present: {{ argocd_admin_secret.rc == 0 }}"

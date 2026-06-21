@@ -2,20 +2,31 @@
 
 Terraform and Ansible automation for deploying a **K3s-based microservice platform** on Alibaba Cloud.
 
-This repository manages **cloud infrastructure and K3s cluster bootstrap only**. Application Kubernetes manifests and GitOps workflows live in a separate repository.
+This repository manages **cloud infrastructure and cluster-level platform components**. Application Kubernetes manifests and GitOps Application definitions live in **[campaign-gitops](https://github.com/nusiss-capstone-project/campaign-gitops)**.
 
 ## Scope
 
+### IaC repository (this repo)
 
-| In scope                                      | Out of scope                    |
-| --------------------------------------------- | ------------------------------- |
-| VPC, VSwitch, Security Groups                 | Business microservice manifests |
-| ECS nodes for K3s (master + optional workers) | Fleet, ArgoCD, app deployment   |
-| EIP for master (or future SLB)                |                                 |
-| Ansible K3s install / verify / reset          |                                 |
-| Headlamp UI + Traefik ingress (dev)           | Rancher (removed — too heavy)   |
-| Kafka (dev, in-cluster)                       |                                 |
-| Kafka UI (dev, via Traefik)                   |                                 |
+| Component | Managed by |
+| --------- | ---------- |
+| ECS, VPC, security groups | Terraform |
+| k3s cluster bootstrap | Ansible (`k3s-server`, `k3s-agent`) |
+| Traefik ingress exposure | Ansible (`traefik`) |
+| Headlamp, Kafka, Kafka UI | Ansible roles |
+| Vault + External Secrets Operator | Ansible (`vault`, `external-secrets`) |
+| Argo CD install + root Application bootstrap | Ansible (`argocd`) |
+
+### GitOps repository ([campaign-gitops](https://github.com/nusiss-capstone-project/campaign-gitops))
+
+| Component | Examples |
+| --------- | -------- |
+| Application manifests | Deployments, Services, IngressRoutes |
+| Helm charts & `values.yaml` | Per-service configuration |
+| Image tags & app secrets | ExternalSecrets referencing Vault |
+| Child Argo CD Applications | task-mservice, campaign-api, … |
+
+Do **not** add task-mservice Deployment/Service/Ingress or application Helm values to this repo — those belong in GitOps.
 
 
 ## Why Headlamp instead of Rancher?
@@ -37,21 +48,29 @@ Rancher was removed from the dev environment. On a single-node K3s cluster it ca
 │   └── modules/              # Reusable Terraform modules
 ├── ansible/
 │   ├── inventories/<env>/    # Generated inventory (do not edit)
-│   ├── playbooks/            # k3s, traefik, headlamp, kafka, kafka-ui, site.yml
+│   ├── playbooks/            # k3s, traefik, headlamp, kafka, kafka-ui, argocd, site.yml
 │   ├── roles/
+│   │   ├── argocd/           # Argo CD Helm + Traefik ingress + root Application
 │   │   ├── kafka/            # Apache Kafka (KRaft, templated manifests)
 │   │   ├── kafka-ui/         # Provectus Kafka UI + Traefik route
+│   │   ├── vault/            # HashiCorp Vault (Helm, standalone)
+│   │   ├── external-secrets/ # ESO + ClusterSecretStore vault-backend
 │   │   ├── headlamp/         # K8s UI + Traefik route
 │   │   ├── traefik/          # K3s Traefik hostPort exposure
 │   │   ├── redis/            # placeholder
 │   │   ├── mysql/            # placeholder
 │   │   ├── akhq/             # placeholder
 │   │   └── monitoring/       # placeholder (Grafana, etc.)
-│   └── scripts/              # Wrapper scripts
+│   └── scripts/              # Wrapper scripts (install-*.sh)
+├── scripts/
+│   ├── fmt.sh
+│   └── validate.sh
 ├── .github/workflows/        # CI (Checkov security scan)
 ├── kubeconfigs/              # Fetched kubeconfig files (gitignored)
-├── scripts/                  # Terraform fmt / validate helpers
 └── docs/
+    ├── argocd.md
+    ├── architecture.md
+    └── ...
 ```
 
 ## Prerequisites
@@ -77,7 +96,7 @@ export ALICLOUD_SECRET_KEY="your-secret-key"
 ### Platform install order
 
 ```text
-K3s  →  Traefik (hostPort)  →  Headlamp (+ IngressRoute)  →  Kafka (in-cluster)  →  Kafka UI (+ IngressRoute)
+K3s  →  Traefik  →  Headlamp / Kafka / Vault / Argo CD  →  GitOps apps (campaign-gitops)
 ```
 
 Or install the full platform stack (after K3s):
@@ -292,7 +311,108 @@ curl -sS -o /dev/null -w '%{http_code}\n' \
 # or: ansible-playbook -i ansible/inventories/dev/hosts.yml ansible/playbooks/site.yml
 ```
 
-### 9. Manual steps (optional)
+### 9. Install Vault + External Secrets (optional)
+
+HashiCorp **Vault** (standalone, KV v2) and **External Secrets Operator** for GitOps secret sync. Applications (ArgoCD repos) use `ClusterSecretStore` `vault-backend` — they do not talk to Vault directly.
+
+```bash
+./ansible/scripts/install-vault.sh dev
+./ansible/scripts/vault-init.sh dev
+./ansible/scripts/vault-unseal.sh dev
+./ansible/scripts/vault-bootstrap.sh dev
+```
+
+Full architecture, MYSQL_DSN flow, rotation, and verification: **[README-Vault.md](README-Vault.md)**
+
+Optional Vault UI via Traefik (HTTPS + BasicAuth/IP allowlist, `vault.dev.example.com`):
+
+```bash
+VAULT_INGRESS_BASIC_AUTH_PASSWORD='...' VAULT_INGRESS_CLUSTER_ISSUER=letsencrypt-prod \
+  ./ansible/scripts/configure-vault-ingress.sh dev
+```
+
+### 10. Install Argo CD (GitOps bootstrap)
+
+Installs **Argo CD** (official Helm chart via Ansible), configures Traefik ingress, and bootstraps the **app-of-apps** root Application `campaign-gitops-root`. Microservice manifests stay in **[campaign-gitops](https://github.com/nusiss-capstone-project/campaign-gitops)**.
+
+```bash
+./ansible/scripts/install-argocd.sh dev
+```
+
+Or as part of the full platform stack (includes Traefik, Headlamp, Kafka, Kafka UI, Argo CD):
+
+```bash
+./ansible/scripts/install-platform.sh dev
+```
+
+Requires k3s and Traefik first (`install-k3s.sh`, `install-traefik.sh`).
+
+**URL**
+
+```text
+https://argocd.<master_public_ip>.sslip.io
+```
+
+Override hostname:
+
+```bash
+export ARGOCD_HOST=argocd.<master_public_ip>.sslip.io
+./ansible/scripts/install-argocd.sh dev
+```
+
+Optional cert-manager TLS:
+
+```bash
+export ARGOCD_CLUSTER_ISSUER=letsencrypt-prod
+./ansible/scripts/install-argocd.sh dev
+```
+
+**Argo CD variables** (`ansible/roles/argocd/defaults/main.yml`)
+
+| Variable | Default | Description |
+| -------- | ------- | ----------- |
+| `argocd_enabled` | `true` | Skip install when `false` |
+| `argocd_namespace` | `argocd` | Argo CD namespace |
+| `argocd_host` | `argocd.<ip>.sslip.io` | Traefik ingress hostname (from inventory or `ARGOCD_HOST`) |
+| `argocd_gitops_repo_url` | campaign-gitops GitHub URL | GitOps repository |
+| `argocd_gitops_target_revision` | `dev` | Branch/tag for root Application |
+| `argocd_gitops_path` | `argocd/applications` | App-of-apps directory in GitOps repo |
+| `argocd_bootstrap_root_app` | `true` | Apply `campaign-gitops-root` after install |
+
+**Role layout**
+
+```text
+ansible/roles/argocd/
+├── defaults/main.yml
+├── tasks/main.yml              # Helm install, wait, bootstrap
+├── tasks/bootstrap.yml         # Apply root Application
+├── tasks/validate.yml
+└── templates/
+    ├── values.yaml.j2          # Helm values (Traefik ingress)
+    ├── campaign-gitops-root.yaml.j2
+    └── repository-secret.example.yaml.j2
+```
+
+**Validation**
+
+```bash
+export KUBECONFIG=$(pwd)/kubeconfigs/dev.yaml
+kubectl get pods -n argocd
+kubectl get ingress -n argocd
+kubectl get applications -n argocd
+kubectl describe application campaign-gitops-root -n argocd
+```
+
+**Admin password** (not stored in Git):
+
+```bash
+kubectl -n argocd get secret argocd-initial-admin-secret \
+  -o jsonpath='{.data.password}' | base64 -d && echo
+```
+
+Full guide: **[docs/argocd.md](docs/argocd.md)**
+
+### 11. Manual steps (optional)
 
 ```bash
 ./ansible/scripts/generate-inventory.sh dev
@@ -342,6 +462,9 @@ Traefik exposure (`install-traefik.sh`) stays separate from app routing (`instal
 - **Headlamp**: official Helm chart, `IngressRoute` via Traefik, token-based K8s auth.
 - **Kafka (dev)**: Apache official image, KRaft single broker, namespace `messaging`, cluster-internal `ClusterIP` only (templated manifests).
 - **Kafka UI (dev)**: Provectus Kafka UI, namespace `messaging`, Traefik IngressRoute at `kafka.<base-domain>`.
+- **Vault (dev)**: HashiCorp Vault Helm standalone, namespace `vault`, KV v2 at `secret/`, Kubernetes auth role `campaign-center`.
+- **External Secrets**: ESO in `external-secrets`, ClusterSecretStore `vault-backend` for GitOps repos.
+- **Argo CD**: Ansible role `argocd` — Helm chart, Traefik Ingress, bootstrap `campaign-gitops-root` → campaign-gitops.
 - **Idempotent**: `kubernetes.core.k8s` apply; safe to re-run install scripts.
 
 ## Troubleshooting
@@ -384,6 +507,8 @@ SARIF results are uploaded to GitHub **Code scanning** when available (requires 
 ## Documentation
 
 - [Architecture](docs/architecture.md)
+- [Argo CD bootstrap](docs/argocd.md)
+- [Vault & External Secrets](README-Vault.md)
 - [Bootstrap K3s (manual reference)](docs/bootstrap-k3s.md)
 - [Operations](docs/operations.md)
 

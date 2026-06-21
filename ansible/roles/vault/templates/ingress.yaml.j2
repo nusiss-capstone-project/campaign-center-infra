@@ -1,0 +1,41 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ vault_ingress_name }}
+  namespace: {{ vault_namespace }}
+  labels:
+    app.kubernetes.io/name: vault
+    app.kubernetes.io/component: ingress
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: {{ vault_ingress_entrypoint }}
+    traefik.ingress.kubernetes.io/router.tls: "true"
+{% if vault_ingress_use_cert_manager | bool %}
+    cert-manager.io/cluster-issuer: {{ vault_ingress_cluster_issuer }}
+{% endif %}
+{% set middlewares = [] %}
+{% if vault_ingress_auth_mode in ['basicauth', 'both'] %}
+{% set _ = middlewares.append(vault_namespace + '-' + vault_ingress_basicauth_middleware_name + '@kubernetescrd') %}
+{% endif %}
+{% if vault_ingress_auth_mode in ['ipallowlist', 'both'] %}
+{% set _ = middlewares.append(vault_namespace + '-' + vault_ingress_ipallowlist_middleware_name + '@kubernetescrd') %}
+{% endif %}
+{% if middlewares | length > 0 %}
+    traefik.ingress.kubernetes.io/router.middlewares: {{ middlewares | join(',') }}
+{% endif %}
+spec:
+  ingressClassName: {{ vault_ingress_class_name }}
+  rules:
+    - host: {{ vault_ingress_host }}
+      http:
+        paths:
+          - path: {{ vault_ingress_path }}
+            pathType: {{ vault_ingress_path_type }}
+            backend:
+              service:
+                name: {{ vault_service_name }}
+                port:
+                  number: {{ vault_api_port }}
+  tls:
+    - hosts:
+        - {{ vault_ingress_host }}
+      secretName: {{ vault_ingress_tls_secret_name }}

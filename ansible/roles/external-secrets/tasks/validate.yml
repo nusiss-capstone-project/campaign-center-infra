@@ -1,0 +1,39 @@
+---
+- name: Get External Secrets pods
+  ansible.builtin.command: kubectl get pods -n {{ external_secrets_namespace }}
+  environment:
+    KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+  register: eso_pods
+  changed_when: false
+
+- name: Get ClusterSecretStore status
+  ansible.builtin.command: >-
+    kubectl get clustersecretstore {{ external_secrets_cluster_store_name }} -o yaml
+  environment:
+    KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+  register: eso_cluster_store
+  changed_when: false
+  failed_when: false
+
+- name: Get Vault pods
+  ansible.builtin.command: kubectl get pods -n {{ vault_namespace }} -l app.kubernetes.io/name=vault
+  environment:
+    KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+  register: vault_pods
+  changed_when: false
+
+- name: Print External Secrets validation summary
+  ansible.builtin.debug:
+    msg:
+      - "External Secrets validation"
+      - ""
+      - "External Secrets pods:"
+      - "{{ eso_pods.stdout_lines }}"
+      - ""
+      - "Vault pods:"
+      - "{{ vault_pods.stdout_lines }}"
+      - ""
+      - "ClusterSecretStore {{ external_secrets_cluster_store_name }}:"
+      - "{{ eso_cluster_store.stdout_lines[:30] | default(['not found']) }}"
+      - ""
+      - "If ClusterSecretStore is not Ready, run vault-bootstrap.sh after init/unseal."

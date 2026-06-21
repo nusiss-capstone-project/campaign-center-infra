@@ -1,0 +1,45 @@
+# HashiCorp Vault — standalone dev (production-like layout, single node)
+global:
+  enabled: true
+
+injector:
+  enabled: false
+
+server:
+  enabled: true
+  dev:
+    enabled: false
+  standalone:
+    enabled: true
+    config: |
+      ui = true
+      listener "tcp" {
+        tls_disable = 1
+        address = "[::]:8200"
+        cluster_address = "[::]:8201"
+      }
+      storage "file" {
+        path = "/vault/data"
+      }
+  ha:
+    enabled: false
+  dataStorage:
+    enabled: true
+    size: {{ vault_storage_size }}
+    accessMode: ReadWriteOnce
+  service:
+    enabled: true
+    type: {{ vault_server_service_type }}
+  ingress:
+    enabled: false
+  resources:
+    requests:
+      cpu: {{ vault_cpu_request }}
+      memory: {{ vault_memory_request }}
+    limits:
+      cpu: {{ vault_cpu_limit }}
+      memory: {{ vault_memory_limit }}
+
+ui:
+  enabled: true
+  serviceType: ClusterIP

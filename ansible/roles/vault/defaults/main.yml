@@ -1,0 +1,57 @@
+---
+vault_enabled: true
+vault_namespace: vault
+vault_release_name: vault
+vault_helm_repo_url: https://helm.releases.hashicorp.com
+
+# Standalone file backend — dev-friendly, single replica (not HA)
+vault_storage_size: 10Gi
+vault_server_service_type: ClusterIP
+
+# In-cluster API (TLS disabled in dev standalone config)
+vault_service_name: vault
+vault_api_port: 8200
+vault_server_url: "http://{{ vault_service_name }}.{{ vault_namespace }}.svc.cluster.local:{{ vault_api_port }}"
+
+vault_memory_request: 256Mi
+vault_memory_limit: 512Mi
+vault_cpu_request: 250m
+vault_cpu_limit: 500m
+
+# Kubernetes auth bootstrap (used by vault-bootstrap.sh)
+vault_k8s_auth_mount_path: kubernetes
+vault_k8s_auth_role_name: campaign-center
+vault_k8s_auth_reviewer_sa_name: vault-auth-reviewer
+vault_policy_name: campaign-center
+vault_kv_mount_path: secret
+
+# Secret path prefix for campaign-center microservices
+vault_secret_prefix: campaign-center
+
+# Traefik Ingress for Vault UI (opt-in — requires TLS + access control)
+vault_ingress_enabled: false
+vault_ingress_name: vault
+vault_ingress_class_name: traefik
+vault_ingress_host: vault.dev.example.com
+vault_ingress_path: /
+vault_ingress_path_type: Prefix
+
+# TLS: auto-detect cert-manager CRD; or set vault_ingress_tls_secret_name for manual cert
+vault_ingress_tls_auto: true
+vault_ingress_cluster_issuer: ""
+vault_ingress_tls_secret_name: vault-ingress-tls
+
+# Access control: basicauth | ipallowlist | both (required when ingress enabled)
+vault_ingress_auth_mode: basicauth
+vault_ingress_basicauth_middleware_name: vault-basicauth
+vault_ingress_basicauth_secret_name: vault-basicauth
+vault_ingress_basic_auth_username: vault-admin
+# Set via VAULT_INGRESS_BASIC_AUTH_PASSWORD or Ansible extra-var (never commit)
+vault_ingress_basic_auth_password: ""
+
+vault_ingress_ipallowlist_middleware_name: vault-ipallowlist
+# Example: ["203.0.113.10/32", "10.0.0.0/8"] — set allowed_admin_cidr from inventory in playbook
+vault_ingress_ip_allowlist: []
+
+# Traefik entrypoint when TLS is active
+vault_ingress_entrypoint: websecure

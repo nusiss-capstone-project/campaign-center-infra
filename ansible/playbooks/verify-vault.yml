@@ -1,0 +1,74 @@
+---
+- name: Verify Vault and External Secrets installation
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  become: false
+  pre_tasks:
+    - name: Validate KUBECONFIG is set
+      ansible.builtin.assert:
+        that:
+          - lookup('env', 'KUBECONFIG') | length > 0
+        fail_msg: >-
+          KUBECONFIG is not set. Run install-vault.sh or export KUBECONFIG
+          to kubeconfigs/<env>.yaml.
+
+  tasks:
+    - name: Get Vault pods
+      ansible.builtin.command: kubectl get pods -n vault
+      environment:
+        KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+      register: vault_pods
+      changed_when: false
+
+    - name: Get Vault services
+      ansible.builtin.command: kubectl get svc -n vault
+      environment:
+        KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+      register: vault_svc
+      changed_when: false
+
+    - name: Check Vault seal status
+      ansible.builtin.command: >-
+        kubectl exec -n vault vault-0 --
+        sh -c 'VAULT_ADDR=http://127.0.0.1:8200 vault status -format=json'
+      environment:
+        KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+      register: vault_status
+      changed_when: false
+      failed_when: false
+
+    - name: Get External Secrets pods
+      ansible.builtin.command: kubectl get pods -n external-secrets
+      environment:
+        KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+      register: eso_pods
+      changed_when: false
+
+    - name: Get ClusterSecretStore
+      ansible.builtin.command: kubectl get clustersecretstore vault-backend
+      environment:
+        KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+      register: cluster_store
+      changed_when: false
+      failed_when: false
+
+    - name: Print Vault verification summary
+      ansible.builtin.debug:
+        msg:
+          - "Vault verification"
+          - ""
+          - "Vault pods:"
+          - "{{ vault_pods.stdout_lines }}"
+          - ""
+          - "Vault services:"
+          - "{{ vault_svc.stdout_lines }}"
+          - ""
+          - "Vault status (JSON):"
+          - "{{ vault_status.stdout | default('unavailable — is vault-0 running?') }}"
+          - ""
+          - "External Secrets pods:"
+          - "{{ eso_pods.stdout_lines }}"
+          - ""
+          - "ClusterSecretStore:"
+          - "{{ cluster_store.stdout_lines | default(['not found']) }}"

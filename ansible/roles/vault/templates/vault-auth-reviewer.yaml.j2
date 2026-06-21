@@ -1,0 +1,25 @@
+# ServiceAccount used by Vault to validate Kubernetes JWTs (TokenReview API).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ vault_k8s_auth_reviewer_sa_name }}
+  namespace: {{ vault_namespace }}
+  labels:
+    app.kubernetes.io/name: vault
+    app.kubernetes.io/component: auth-reviewer
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ vault_k8s_auth_reviewer_sa_name }}-auth-delegator
+  labels:
+    app.kubernetes.io/name: vault
+    app.kubernetes.io/component: auth-reviewer
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:auth-delegator
+subjects:
+  - kind: ServiceAccount
+    name: {{ vault_k8s_auth_reviewer_sa_name }}
+    namespace: {{ vault_namespace }}

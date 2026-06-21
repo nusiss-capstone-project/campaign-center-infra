@@ -1,0 +1,32 @@
+---
+external_secrets_enabled: true
+external_secrets_namespace: external-secrets
+external_secrets_release_name: external-secrets
+external_secrets_helm_repo_url: https://charts.external-secrets.io
+
+# Vault integration (ClusterSecretStore)
+external_secrets_cluster_store_name: vault-backend
+external_secrets_vault_sa_name: external-secrets-vault
+external_secrets_vault_auth_role: campaign-center
+external_secrets_vault_auth_mount_path: kubernetes
+external_secrets_vault_kv_path: secret
+external_secrets_vault_kv_version: v2
+
+# Defaults from vault role (override in playbook if needed)
+vault_namespace: vault
+vault_server_url: "http://vault.vault.svc.cluster.local:8200"
+
+external_secrets_memory_request: 128Mi
+external_secrets_memory_limit: 256Mi
+external_secrets_cpu_request: 50m
+external_secrets_cpu_limit: 200m
+
+webhook_memory_request: 64Mi
+webhook_memory_limit: 128Mi
+webhook_cpu_request: 50m
+webhook_cpu_limit: 100m
+
+cert_controller_memory_request: 64Mi
+cert_controller_memory_limit: 128Mi
+cert_controller_cpu_request: 50m
+cert_controller_cpu_limit: 100m

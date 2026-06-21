@@ -1,0 +1,87 @@
+---
+- name: Skip Vault installation when disabled
+  ansible.builtin.meta: end_play
+  when: not (vault_enabled | bool)
+
+- name: Add HashiCorp Helm repository
+  kubernetes.core.helm_repository:
+    name: hashicorp
+    repo_url: "{{ vault_helm_repo_url }}"
+
+- name: Render Vault Helm values
+  ansible.builtin.template:
+    src: vault-values.yaml.j2
+    dest: "/tmp/vault-values-{{ vault_release_name }}.yaml"
+    mode: "0600"
+
+- name: Install Vault (standalone, persistent storage)
+  kubernetes.core.helm:
+    name: "{{ vault_release_name }}"
+    chart_ref: hashicorp/vault
+    release_namespace: "{{ vault_namespace }}"
+    create_namespace: true
+    # Vault stays Not Ready until init/unseal — do not wait for readiness probe
+    wait: false
+    update_repo_cache: true
+    values_files:
+      - "/tmp/vault-values-{{ vault_release_name }}.yaml"
+
+- name: Wait for Vault pod Running phase (image pull may take several minutes)
+  ansible.builtin.command: >-
+    kubectl get pod {{ vault_release_name }}-0 -n {{ vault_namespace }}
+    -o jsonpath='{.status.phase}'
+  environment:
+    KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+  register: vault_pod_phase
+  until: vault_pod_phase.stdout == "Running"
+  retries: 60
+  delay: 10
+  changed_when: false
+
+- name: Show Vault pod status after install
+  ansible.builtin.command: kubectl get pods -n {{ vault_namespace }} -o wide
+  environment:
+    KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+  register: vault_pod_status
+  changed_when: false
+
+- name: Note Vault readiness before init
+  ansible.builtin.debug:
+    msg:
+      - "{{ vault_pod_status.stdout_lines }}"
+      - ""
+      - "0/1 Ready is expected — Vault is sealed until vault-init.sh + vault-unseal.sh"
+
+- name: Create Vault Kubernetes auth reviewer ServiceAccount
+  kubernetes.core.k8s:
+    state: present
+    template: vault-auth-reviewer.yaml.j2
+
+- name: Expose Vault UI through Traefik Ingress
+  ansible.builtin.import_tasks: ingress.yml
+  when: vault_ingress_enabled | bool
+
+- name: Show Vault post-install instructions
+  ansible.builtin.debug:
+    msg:
+      - "Vault Helm release installed (standalone, sealed until init/unseal)"
+      - "API (in-cluster): {{ vault_server_url }}"
+      - ""
+      - "Next steps (one-time per cluster):"
+      - "  ./ansible/scripts/vault-init.sh <env>"
+      - "  ./ansible/scripts/vault-unseal.sh <env>"
+      - "  ./ansible/scripts/vault-bootstrap.sh <env>"
+      - ""
+      - "See README-Vault.md for architecture and GitOps integration."
+
+- name: Show Vault UI via Traefik Ingress
+  ansible.builtin.debug:
+    msg:
+      - "Vault UI: https://{{ vault_ingress_host }}/ui"
+      - "Auth: {{ vault_ingress_auth_mode }} | TLS entrypoint: {{ vault_ingress_entrypoint }}"
+  when: vault_ingress_enabled | bool
+
+- name: Show Vault UI via port-forward
+  ansible.builtin.debug:
+    msg: "Vault UI: kubectl port-forward -n {{ vault_namespace }} svc/{{ vault_service_name }} 8200:8200"
+  when: not (vault_ingress_enabled | bool)

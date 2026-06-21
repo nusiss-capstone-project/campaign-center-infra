@@ -1,0 +1,37 @@
+---
+argocd_enabled: true
+argocd_namespace: argocd
+argocd_release_name: argocd
+argocd_helm_repo_url: https://argoproj.github.io/argo-helm
+
+# Computed in playbook from inventory / ARGOCD_HOST
+argocd_host: ""
+
+# Traefik Ingress (TLS terminated at Traefik; server.insecure in chart values)
+argocd_ingress_class_name: traefik
+argocd_ingress_tls_enabled: true
+argocd_ingress_entrypoint: websecure
+argocd_cluster_issuer: ""
+
+# Root Application (app-of-apps)
+argocd_root_app_name: campaign-gitops-root
+argocd_gitops_repo_url: https://github.com/nusiss-capstone-project/campaign-gitops
+argocd_gitops_target_revision: dev
+argocd_gitops_path: argocd/applications
+argocd_gitops_destination_server: https://kubernetes.default.svc
+argocd_gitops_destination_namespace: argocd
+argocd_bootstrap_root_app: true
+
+# Dev single-node resource limits
+argocd_server_memory_request: 128Mi
+argocd_server_memory_limit: 256Mi
+argocd_server_cpu_request: 50m
+argocd_server_cpu_limit: 500m
+argocd_controller_memory_request: 256Mi
+argocd_controller_memory_limit: 512Mi
+argocd_controller_cpu_request: 100m
+argocd_controller_cpu_limit: 500m
+argocd_repo_server_memory_request: 128Mi
+argocd_repo_server_memory_limit: 256Mi
+argocd_repo_server_cpu_request: 50m
+argocd_repo_server_cpu_limit: 500m

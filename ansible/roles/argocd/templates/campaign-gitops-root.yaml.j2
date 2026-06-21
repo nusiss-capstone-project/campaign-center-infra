@@ -1,0 +1,26 @@
+# Root Application (app-of-apps) — bootstrap managed by campaign-center-infra.
+# Individual apps (task-mservice, campaign-api, …) live in campaign-gitops.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: {{ argocd_root_app_name }}
+  namespace: {{ argocd_namespace }}
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: {{ argocd_gitops_repo_url }}
+    targetRevision: {{ argocd_gitops_target_revision }}
+    path: {{ argocd_gitops_path }}
+    directory:
+      recurse: false
+  destination:
+    server: {{ argocd_gitops_destination_server }}
+    namespace: {{ argocd_gitops_destination_namespace }}
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

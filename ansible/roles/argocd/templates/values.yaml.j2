@@ -1,0 +1,70 @@
+# Argo CD Helm values — single-node k3s dev cluster
+# Chart: argo/argo-cd — https://argoproj.github.io/argo-helm
+
+global:
+  domain: {{ argocd_host }}
+
+configs:
+  params:
+    # Traefik terminates TLS; Argo CD server serves plain HTTP internally
+    server.insecure: "true"
+
+server:
+  replicas: 1
+  service:
+    type: ClusterIP
+  ingress:
+    enabled: true
+    ingressClassName: {{ argocd_ingress_class_name }}
+    hostname: {{ argocd_host }}
+    path: /
+    pathType: Prefix
+    annotations:
+      traefik.ingress.kubernetes.io/router.entrypoints: {{ argocd_ingress_entrypoint }}
+      traefik.ingress.kubernetes.io/router.tls: "true"
+{% if argocd_cluster_issuer | length > 0 %}
+      cert-manager.io/cluster-issuer: {{ argocd_cluster_issuer }}
+{% endif %}
+    tls: {{ argocd_ingress_tls_enabled | bool }}
+  resources:
+    requests:
+      cpu: {{ argocd_server_cpu_request }}
+      memory: {{ argocd_server_memory_request }}
+    limits:
+      cpu: {{ argocd_server_cpu_limit }}
+      memory: {{ argocd_server_memory_limit }}
+
+controller:
+  replicas: 1
+  resources:
+    requests:
+      cpu: {{ argocd_controller_cpu_request }}
+      memory: {{ argocd_controller_memory_request }}
+    limits:
+      cpu: {{ argocd_controller_cpu_limit }}
+      memory: {{ argocd_controller_memory_limit }}
+
+repoServer:
+  replicas: 1
+  resources:
+    requests:
+      cpu: {{ argocd_repo_server_cpu_request }}
+      memory: {{ argocd_repo_server_memory_request }}
+    limits:
+      cpu: {{ argocd_repo_server_cpu_limit }}
+      memory: {{ argocd_repo_server_memory_limit }}
+
+applicationSet:
+  enabled: false
+
+notifications:
+  enabled: false
+
+dex:
+  enabled: false
+
+redis:
+  enabled: true
+
+redis-ha:
+  enabled: false

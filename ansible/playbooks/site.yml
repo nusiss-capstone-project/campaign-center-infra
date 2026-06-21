@@ -11,3 +11,4 @@
 - import_playbook: install-headlamp.yml
 - import_playbook: install-kafka.yml
 - import_playbook: install-kafka-ui.yml
+- import_playbook: install-argocd.yml

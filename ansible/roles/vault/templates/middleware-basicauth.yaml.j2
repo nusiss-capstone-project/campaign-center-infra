@@ -1,0 +1,12 @@
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: {{ vault_ingress_basicauth_middleware_name }}
+  namespace: {{ vault_namespace }}
+  labels:
+    app.kubernetes.io/name: vault
+    app.kubernetes.io/component: ingress-auth
+spec:
+  basicAuth:
+    secret: {{ vault_ingress_basicauth_secret_name }}
+    removeHeader: true
