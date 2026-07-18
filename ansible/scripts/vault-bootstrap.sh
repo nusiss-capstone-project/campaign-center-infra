@@ -42,11 +42,14 @@ POLICY_FILE="${REPO_ROOT}/ansible/roles/vault/files/campaign-center-policy.hcl"
 VAULT_POD="vault-0"
 VAULT_NS="vault"
 ESO_NS="external-secrets"
-ESO_SA="external-secrets-vault"
+# Dedicated Vault auth SA (ClusterSecretStore serviceAccountRef) + Helm controller SA
+ESO_VAULT_SA="external-secrets-vault"
+ESO_HELM_SA="external-secrets"
 REVIEWER_SA="vault-auth-reviewer"
 K8S_AUTH_MOUNT="kubernetes"
 VAULT_ROLE="campaign-center"
 VAULT_POLICY="campaign-center"
+VAULT_ROLE_TTL="24h"
 
 [[ -f "${KUBECONFIG_PATH}" ]] || { echo "ERROR: Kubeconfig not found: ${KUBECONFIG_PATH}" >&2; exit 1; }
 [[ -f "${POLICY_FILE}" ]] || { echo "ERROR: Policy file not found: ${POLICY_FILE}" >&2; exit 1; }
@@ -100,14 +103,28 @@ kubectl exec -n "${VAULT_NS}" "${VAULT_POD}" -- \
     disable_iss_validation=true
 
 echo "==> Creating Kubernetes auth role ${VAULT_ROLE}"
+echo "    bound_service_account_names=${ESO_VAULT_SA},${ESO_HELM_SA}"
+echo "    bound_service_account_namespaces=${ESO_NS}"
+echo "    policies=${VAULT_POLICY} ttl=${VAULT_ROLE_TTL}"
 vault_exec write "auth/${K8S_AUTH_MOUNT}/role/${VAULT_ROLE}" \
-  bound_service_account_names="${ESO_SA},${REVIEWER_SA}" \
-  bound_service_account_namespaces="${ESO_NS},${VAULT_NS}" \
+  bound_service_account_names="${ESO_VAULT_SA},${ESO_HELM_SA}" \
+  bound_service_account_namespaces="${ESO_NS}" \
   policies="${VAULT_POLICY}" \
-  ttl=24h
+  ttl="${VAULT_ROLE_TTL}"
+
+echo "==> Verifying role and policy"
+vault_exec read "auth/${K8S_AUTH_MOUNT}/role/${VAULT_ROLE}"
+vault_exec policy read "${VAULT_POLICY}"
 
 echo ""
 echo "Bootstrap complete."
+echo ""
+echo "Policy grants read on secret/data/campaign-center/* (all envs + microservices)."
+echo ""
+echo "If ExternalSecret shows 'service account name not authorized':"
+echo "  1. Re-apply ClusterSecretStore: ./ansible/scripts/install-vault.sh ${ENV}"
+echo "  2. Confirm SA exists: kubectl get sa -n ${ESO_NS} ${ESO_VAULT_SA}"
+echo "  3. Confirm ClusterSecretStore uses serviceAccountRef.name: ${ESO_VAULT_SA}"
 echo ""
 echo "ClusterSecretStore 'vault-backend' should become Ready within ~1 minute."
 echo "Verify:"

@@ -251,16 +251,42 @@ Disable components: `vault_enabled: false` or `external_secrets_enabled: false`.
 | Auth mount | `kubernetes` |
 | Role | `campaign-center` |
 | Policy | `campaign-center` (read `secret/data/campaign-center/*`) |
-| ESO ServiceAccount | `external-secrets-vault` @ `external-secrets` |
-| Token reviewer SA | `vault-auth-reviewer` @ `vault` (system:auth-delegator) |
+| ESO ServiceAccount | `external-secrets-vault` @ `external-secrets` (ClusterSecretStore auth) |
+| Token reviewer SA | `vault-auth-reviewer` @ `vault` (TokenReview only — not bound to role) |
+
+Policy `campaign-center` covers **all microservices** under one prefix — no per-service policy needed:
+
+```text
+secret/data/campaign-center/<env>/<service>   e.g. .../dev/task-mservice
+secret/data/campaign-center/<env>/<service>   e.g. .../dev/campaign-api
+```
+
+`vault-bootstrap.sh` creates the role:
+
+```bash
+vault write auth/kubernetes/role/campaign-center \
+  bound_service_account_names=external-secrets-vault,external-secrets \
+  bound_service_account_namespaces=external-secrets \
+  policies=campaign-center \
+  ttl=24h
+```
+
+If ExternalSecret fails with **`service account name not authorized`**, the Vault role is fine but
+`ClusterSecretStore` may still reference an old ServiceAccount — re-run:
+
+```bash
+./ansible/scripts/install-vault.sh dev
+./ansible/scripts/vault-bootstrap.sh dev
+```
 
 To allow a microservice ServiceAccount direct Vault access (uncommon with ESO), extend the role:
 
 ```bash
 vault write auth/kubernetes/role/campaign-center \
-  bound_service_account_names=external-secrets-vault,task-mservice \
+  bound_service_account_names=external-secrets-vault,external-secrets,task-mservice \
   bound_service_account_namespaces=external-secrets,task-mservice \
-  policies=campaign-center ttl=24h
+  policies=campaign-center \
+  ttl=24h
 ```
 
 ## Vault UI via Traefik Ingress (optional)
@@ -346,8 +372,10 @@ Helm chart `server.ingress.enabled` remains **false** — Ingress is managed by 
 | Issue | Action |
 | ----- | ------ |
 | Vault pod Running but API sealed | `./ansible/scripts/vault-unseal.sh dev` |
+| Auto-unseal after restart (dev) | `./ansible/scripts/vault-install-unsealer-cronjob.sh install` — stores key in K8s Secret; dev only |
 | ClusterSecretStore not Ready | Run `vault-bootstrap.sh`; check `kubectl logs -n external-secrets deployment/external-secrets` |
 | ExternalSecret `SecretSyncedError` | Verify path exists: `vault kv get secret/campaign-center/dev/task-mservice` |
+| Helm upgrade: StatefulSet spec forbidden | Normal on re-run — data safe. Use `./ansible/scripts/configure-external-secrets.sh dev` for ESO only |
 | Permission denied | Re-run bootstrap; confirm policy and role bindings |
 | Re-init needed | **Destructive** — delete PVC `data-vault-0`, reinstall, init again |
 
@@ -357,6 +385,7 @@ Helm chart `server.ingress.enabled` remains **false** — Ingress is managed by 
 ansible/roles/vault/                    # Vault Helm + auth reviewer SA
 ansible/roles/external-secrets/         # ESO Helm + ClusterSecretStore
 ansible/scripts/install-vault.sh
+ansible/scripts/configure-external-secrets.sh
 ansible/scripts/vault-init.sh
 ansible/scripts/vault-unseal.sh
 ansible/scripts/vault-bootstrap.sh

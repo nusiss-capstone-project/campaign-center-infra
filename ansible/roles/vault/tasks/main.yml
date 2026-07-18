@@ -15,16 +15,29 @@
     mode: "0600"
 
 - name: Install Vault (standalone, persistent storage)
-  kubernetes.core.helm:
-    name: "{{ vault_release_name }}"
-    chart_ref: hashicorp/vault
-    release_namespace: "{{ vault_namespace }}"
-    create_namespace: true
-    # Vault stays Not Ready until init/unseal — do not wait for readiness probe
-    wait: false
-    update_repo_cache: true
-    values_files:
-      - "/tmp/vault-values-{{ vault_release_name }}.yaml"
+  block:
+    - name: Upgrade Vault Helm release
+      kubernetes.core.helm:
+        name: "{{ vault_release_name }}"
+        chart_ref: hashicorp/vault
+        release_namespace: "{{ vault_namespace }}"
+        create_namespace: true
+        # Vault stays Not Ready until init/unseal — do not wait for readiness probe
+        wait: false
+        update_repo_cache: true
+        # Do not reset — avoids patching immutable StatefulSet fields (PVC template)
+        reset_values: false
+        reuse_values: true
+        values_files:
+          - "/tmp/vault-values-{{ vault_release_name }}.yaml"
+  rescue:
+    - name: Warn when Vault Helm upgrade is blocked by StatefulSet immutability
+      ansible.builtin.debug:
+        msg:
+          - "Vault Helm upgrade skipped — existing StatefulSet/PVC unchanged (data is safe)."
+          - "This is normal when re-running install-vault.sh on an existing cluster."
+          - "To update External Secrets / ClusterSecretStore only:"
+          - "  ./ansible/scripts/configure-external-secrets.sh <env>"
 
 - name: Wait for Vault pod Running phase (image pull may take several minutes)
   ansible.builtin.command: >-

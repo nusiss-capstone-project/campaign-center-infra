@@ -6,7 +6,10 @@ metadata:
 spec:
   valuesContent: |-
 {% if traefik_exposure_mode == 'hostport' %}
-    # Dev: bind Traefik to host ports 80/443 (no random NodePorts)
+    # Dev: bind Traefik to host ports 80/443 on the control-plane (master) only.
+    # EIP / public ingress lands on master — Traefik must not schedule on workers.
+    deployment:
+      replicas: 1
     service:
       type: ClusterIP
     ports:
@@ -22,6 +25,25 @@ spec:
           default: true
         tls:
           enabled: true
+{% if traefik_pin_to_control_plane | bool %}
+    affinity:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+            - matchExpressions:
+                - key: node-role.kubernetes.io/control-plane
+                  operator: Exists
+            - matchExpressions:
+                - key: node-role.kubernetes.io/master
+                  operator: Exists
+    tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
+      - key: node-role.kubernetes.io/master
+        operator: Exists
+        effect: NoSchedule
+{% endif %}
 {% elif traefik_exposure_mode == 'loadbalancer' %}
     # Production LoadBalancer mode — not implemented yet.
     # Extend with traefik_loadbalancer_class / traefik_loadbalancer_annotations.

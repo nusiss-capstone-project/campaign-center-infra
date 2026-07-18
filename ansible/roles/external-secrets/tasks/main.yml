@@ -42,7 +42,7 @@
     values_files:
       - "/tmp/external-secrets-values-{{ external_secrets_release_name }}.yaml"
 
-- name: Create External Secrets Vault authentication ServiceAccount
+- name: Create Vault authentication ServiceAccount for ClusterSecretStore
   kubernetes.core.k8s:
     state: present
     template: vault-serviceaccount.yaml.j2

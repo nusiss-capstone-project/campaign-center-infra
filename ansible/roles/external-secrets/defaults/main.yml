@@ -6,6 +6,7 @@ external_secrets_helm_repo_url: https://charts.external-secrets.io
 
 # Vault integration (ClusterSecretStore)
 external_secrets_cluster_store_name: vault-backend
+# Dedicated SA for Vault auth — must match Vault role bound_service_account_names
 external_secrets_vault_sa_name: external-secrets-vault
 external_secrets_vault_auth_role: campaign-center
 external_secrets_vault_auth_mount_path: kubernetes

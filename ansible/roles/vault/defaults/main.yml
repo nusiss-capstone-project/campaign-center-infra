@@ -5,7 +5,7 @@ vault_release_name: vault
 vault_helm_repo_url: https://helm.releases.hashicorp.com
 
 # Standalone file backend — dev-friendly, single replica (not HA)
-vault_storage_size: 10Gi
+vault_storage_size: 1Gi
 vault_server_service_type: ClusterIP
 
 # In-cluster API (TLS disabled in dev standalone config)
@@ -22,6 +22,9 @@ vault_cpu_limit: 500m
 vault_k8s_auth_mount_path: kubernetes
 vault_k8s_auth_role_name: campaign-center
 vault_k8s_auth_reviewer_sa_name: vault-auth-reviewer
+vault_k8s_auth_bound_sa_names: external-secrets-vault,external-secrets
+vault_k8s_auth_bound_sa_namespaces: external-secrets
+vault_k8s_auth_role_ttl: 24h
 vault_policy_name: campaign-center
 vault_kv_mount_path: secret
 

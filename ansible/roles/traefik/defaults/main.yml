@@ -4,6 +4,9 @@ traefik_exposure_mode: hostport
 traefik_http_port: 80
 traefik_https_port: 443
 
+# Pin Traefik to control-plane/master (required for hostPort + master EIP)
+traefik_pin_to_control_plane: true
+
 # Reserved for production LoadBalancer mode (Alibaba Cloud SLB) — not used in dev
 # traefik_loadbalancer_class: ""
 # traefik_loadbalancer_annotations: {}

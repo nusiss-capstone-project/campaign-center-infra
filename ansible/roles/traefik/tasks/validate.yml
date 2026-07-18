@@ -22,3 +22,13 @@
       - traefik_pods.resources | length > 0
     fail_msg: >-
       No Traefik pods found in kube-system. Install K3s before running this playbook.
+
+- name: Show Traefik pod node placement
+  ansible.builtin.debug:
+    msg: >-
+      Traefik pods:
+      {% for p in traefik_pods.resources %}
+      {{ p.metadata.name }} on {{ p.spec.nodeName | default('pending') }};
+      {% endfor %}
+  when: traefik_pods.resources | length > 0
+
