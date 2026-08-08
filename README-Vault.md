@@ -44,7 +44,11 @@ Future services (`task-mservice`, `campaign-api`, `reward-service`, `user-servic
 
 1. **Install** — Ansible deploys the [HashiCorp Vault Helm chart](https://helm.releases.hashicorp.com) in **standalone** mode with a **10Gi PVC** (file storage).
 2. **Initialize** — `vault operator init` generates unseal key(s) and a root token (stored locally under `vault-keys/<env>/`, gitignored).
-3. **Unseal** — Vault starts sealed after restart; unseal with `vault-unseal.sh` (dev uses 1-of-1; production should use Shamir 5/3 + auto-unseal).
+3. **Unseal** — Vault starts sealed after restart. Dev options:
+   - Manual: `vault-unseal.sh`
+   - **Sidecar (recommended for reboot recovery):** `configure-vault-unsealer.sh` — Secret + sidecar on `vault-0`
+   - CronJob alternative: `vault-install-unsealer-cronjob.sh` (do **not** run both)
+   Production should use Shamir 5/3 + **KMS auto-unseal**, not a K8s Secret.
 4. **Bootstrap** — Enable KV v2 at `secret/`, Kubernetes auth, policy, and role `campaign-center`.
 5. **Store secrets** — `vault kv put secret/campaign-center/<env>/<service> KEY=value`.
 6. **UI** — `kubectl port-forward -n vault svc/vault 8200:8200` → http://localhost:8200 (ClusterIP only; no ingress by default).
@@ -95,7 +99,22 @@ export KUBECONFIG=$(pwd)/kubeconfigs/dev.yaml
 ./ansible/scripts/vault-init.sh dev
 ./ansible/scripts/vault-unseal.sh dev
 ./ansible/scripts/vault-bootstrap.sh dev
+
+# 3. Dev auto-unseal after node/pod reboot (sidecar; stores key in K8s Secret)
+./ansible/scripts/configure-vault-unsealer.sh dev
 ```
+
+### Auto-unseal after reboot (dev)
+
+| Approach | Script | Notes |
+|----------|--------|-------|
+| **Sidecar** | `configure-vault-unsealer.sh` | Injects `unsealer` into `vault-0`; polls `127.0.0.1:8200`; key in Secret `vault/vault-unseal-key` |
+| CronJob | `vault-install-unsealer-cronjob.sh install` | Every ~2 minutes; same Secret pattern |
+| Manual | `vault-unseal.sh` | No automation |
+
+**Use only one of sidecar or CronJob.** Sidecar install uninstalls the CronJob if present.
+
+Security: the unseal key lives in the cluster (etcd). Acceptable for **dev/demo only**. Staging/prod → AliCloud KMS seal (see table below).
 
 After bootstrap, verify:
 
@@ -371,8 +390,8 @@ Helm chart `server.ingress.enabled` remains **false** — Ingress is managed by 
 
 | Issue | Action |
 | ----- | ------ |
-| Vault pod Running but API sealed | `./ansible/scripts/vault-unseal.sh dev` |
-| Auto-unseal after restart (dev) | `./ansible/scripts/vault-install-unsealer-cronjob.sh install` — stores key in K8s Secret; dev only |
+| Vault pod Running but API sealed | `./ansible/scripts/vault-unseal.sh dev` or wait for sidecar/CronJob |
+| Auto-unseal after restart (dev) | Prefer `./ansible/scripts/configure-vault-unsealer.sh dev` (sidecar). Alt: `vault-install-unsealer-cronjob.sh install`. Dev only — key in K8s Secret. |
 | ClusterSecretStore not Ready | Run `vault-bootstrap.sh`; check `kubectl logs -n external-secrets deployment/external-secrets` |
 | ExternalSecret `SecretSyncedError` | Verify path exists: `vault kv get secret/campaign-center/dev/task-mservice` |
 | Helm upgrade: StatefulSet spec forbidden | Normal on re-run — data safe. Use `./ansible/scripts/configure-external-secrets.sh dev` for ESO only |
@@ -389,5 +408,7 @@ ansible/scripts/configure-external-secrets.sh
 ansible/scripts/vault-init.sh
 ansible/scripts/vault-unseal.sh
 ansible/scripts/vault-bootstrap.sh
+ansible/scripts/configure-vault-unsealer.sh   # sidecar auto-unseal (dev)
+ansible/scripts/vault-install-unsealer-cronjob.sh  # CronJob alt (dev)
 vault-keys/<env>/                       # gitignored init material
 ```

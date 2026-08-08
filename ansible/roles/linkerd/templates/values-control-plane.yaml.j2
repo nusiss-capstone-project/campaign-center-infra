@@ -1,0 +1,32 @@
+# Linkerd control-plane Helm values — identity materials from ansible/secrets/linkerd.<env>/
+identityTrustAnchorsPEM: |
+{{ linkerd_ca_crt_pem | indent(2, first=True) }}
+
+identity:
+  issuer:
+    tls:
+      crtPEM: |
+{{ linkerd_issuer_crt_pem | indent(8, first=True) }}
+      keyPEM: |
+{{ linkerd_issuer_key_pem | indent(8, first=True) }}
+
+{% if linkerd_prefer_worker_nodes | bool %}
+# Soft-prefer non-control-plane nodes; tolerate control-plane taints as fallback
+nodeAffinity:
+  preferredDuringSchedulingIgnoredDuringExecution:
+    - weight: 100
+      preference:
+        matchExpressions:
+          - key: node-role.kubernetes.io/control-plane
+            operator: DoesNotExist
+          - key: node-role.kubernetes.io/master
+            operator: DoesNotExist
+
+tolerations:
+  - key: node-role.kubernetes.io/control-plane
+    operator: Exists
+    effect: NoSchedule
+  - key: node-role.kubernetes.io/master
+    operator: Exists
+    effect: NoSchedule
+{% endif %}

@@ -3,6 +3,8 @@ vault_enabled: true
 vault_namespace: vault
 vault_release_name: vault
 vault_helm_repo_url: https://helm.releases.hashicorp.com
+# Pin to match existing release; avoid chart 0.34+ httproute template breakage on upgrade
+vault_helm_chart_version: "0.33.0"
 
 # Standalone file backend — dev-friendly, single replica (not HA)
 vault_storage_size: 1Gi
@@ -58,3 +60,17 @@ vault_ingress_ip_allowlist: []
 
 # Traefik entrypoint when TLS is active
 vault_ingress_entrypoint: websecure
+
+# Dev-only sidecar auto-unseal (stores Shamir key in a K8s Secret — not for production)
+vault_unsealer_sidecar_enabled: false
+vault_unseal_secret_name: vault-unseal-key
+vault_unseal_secret_key: unseal.key
+# Path to local unseal key (set by configure-vault-unsealer.sh / playbook)
+vault_unseal_key_file: ""
+# Match server app version from chart 0.33.0 (vault 2.0.x); older CLI can hang on status/unseal
+vault_unsealer_image: hashicorp/vault:2.0.2
+vault_unsealer_poll_interval_seconds: 5
+vault_unsealer_cpu_request: 10m
+vault_unsealer_memory_request: 32Mi
+vault_unsealer_cpu_limit: 100m
+vault_unsealer_memory_limit: 64Mi

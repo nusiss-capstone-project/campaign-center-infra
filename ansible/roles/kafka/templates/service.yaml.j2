@@ -26,6 +26,9 @@ metadata:
   labels:
     app.kubernetes.io/name: {{ kafka_app_name }}
     app.kubernetes.io/component: broker
+  annotations:
+    # Meshed clients must treat Kafka as opaque TCP (broker stays unmeshed)
+    config.linkerd.io/opaque-ports: "{{ kafka_client_port }}"
 spec:
   type: ClusterIP
   selector:

@@ -1,0 +1,38 @@
+---
+- name: Apply Cloudflare Origin TLS secrets for Traefik
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  become: false
+  vars:
+    origin_tls_cert_dir: "{{ lookup('env', 'ORIGIN_TLS_DIR') | default('', true) }}"
+    origin_tls_secret_name: "{{ lookup('env', 'ORIGIN_TLS_SECRET_NAME') | default('campaignhub-origin-tls', true) }}"
+    origin_tls_namespaces: >-
+      {{
+        lookup('env', 'ORIGIN_TLS_NAMESPACES').split(',') | map('trim') | select('length') | list
+        if lookup('env', 'ORIGIN_TLS_NAMESPACES') | length > 0
+        else ['headlamp']
+      }}
+  pre_tasks:
+    - name: Validate KUBECONFIG is set
+      ansible.builtin.assert:
+        that:
+          - lookup('env', 'KUBECONFIG') | length > 0
+        fail_msg: >-
+          KUBECONFIG is not set. Export KUBECONFIG to kubeconfigs/<env>.yaml.
+
+    - name: Validate kubeconfig file exists
+      ansible.builtin.stat:
+        path: "{{ lookup('env', 'KUBECONFIG') }}"
+      register: kubeconfig_file
+
+    - name: Fail when kubeconfig file is missing
+      ansible.builtin.assert:
+        that:
+          - kubeconfig_file.stat.exists
+        fail_msg: >-
+          Kubeconfig not found at {{ lookup('env', 'KUBECONFIG') }}.
+          Run ./ansible/scripts/install-k3s.sh <env> first.
+
+  roles:
+    - origin-tls

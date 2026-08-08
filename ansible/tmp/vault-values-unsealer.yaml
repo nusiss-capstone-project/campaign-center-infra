@@ -1,4 +1,4 @@
-# HashiCorp Vault — standalone dev (production-like layout, single node)
+# HashiCorp Vault — standalone + unsealer sidecar (dev)
 global:
   enabled: true
 
@@ -25,28 +25,25 @@ server:
     enabled: false
   dataStorage:
     enabled: true
-    size: {{ vault_storage_size }}
+    size: 1Gi
     accessMode: ReadWriteOnce
   service:
     enabled: true
-    type: {{ vault_server_service_type }}
+    type: ClusterIP
   ingress:
     enabled: false
-  # Avoid nil pointer on newer charts that expect this block
   httproute:
     enabled: false
   resources:
     requests:
-      cpu: {{ vault_cpu_request }}
-      memory: {{ vault_memory_request }}
+      cpu: 250m
+      memory: 256Mi
     limits:
-      cpu: {{ vault_cpu_limit }}
-      memory: {{ vault_memory_limit }}
-{% if vault_unsealer_sidecar_enabled | bool %}
-  # Dev-only: poll localhost and unseal from K8s Secret (see configure-vault-unsealer.sh)
+      cpu: 500m
+      memory: 512Mi
   extraContainers:
     - name: unsealer
-      image: {{ vault_unsealer_image }}
+      image: hashicorp/vault:2.0.2
       imagePullPolicy: IfNotPresent
       env:
         - name: VAULT_ADDR
@@ -54,10 +51,10 @@ server:
         - name: VAULT_UNSEAL_KEY
           valueFrom:
             secretKeyRef:
-              name: {{ vault_unseal_secret_name }}
-              key: {{ vault_unseal_secret_key }}
+              name: vault-unseal-key
+              key: unseal.key
         - name: UNSEAL_POLL_INTERVAL
-          value: "{{ vault_unsealer_poll_interval_seconds }}"
+          value: "5"
       command:
         - /bin/sh
         - -ec
@@ -71,7 +68,6 @@ server:
             vault status >/tmp/vs 2>&1
             rc=$?
             set -e
-            # vault status: 0=unsealed, 1=error, 2=sealed
             if [ "${rc}" -eq 1 ]; then
               sleep "${INTERVAL}"
               continue
@@ -92,12 +88,11 @@ server:
           done
       resources:
         requests:
-          cpu: {{ vault_unsealer_cpu_request }}
-          memory: {{ vault_unsealer_memory_request }}
+          cpu: 10m
+          memory: 32Mi
         limits:
-          cpu: {{ vault_unsealer_cpu_limit }}
-          memory: {{ vault_unsealer_memory_limit }}
-{% endif %}
+          cpu: 100m
+          memory: 64Mi
 
 ui:
   enabled: true

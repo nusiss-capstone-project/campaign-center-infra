@@ -192,11 +192,30 @@ terraform init -reconfigure
 | K3s install fails        | SSH to master, check `journalctl -u k3s`; ensure outbound internet for get.k3s.io      |
 
 
+## Optional: Origin TLS + Linkerd
+
+After the platform stack is up (and DNS for `campaignhub.best` points at the master EIP via Cloudflare):
+
+```bash
+# Cloudflare Origin CA → Traefik TLS secret
+./ansible/scripts/configure-origin-tls.sh dev
+
+# Headlamp HTTPS (example host)
+HEADLAMP_HOST=headlamp.campaignhub.best HEADLAMP_TLS=true \
+  ./ansible/scripts/install-headlamp.sh dev
+
+# Linkerd control plane (app namespace inject is done in campaign-gitops)
+./ansible/scripts/install-linkerd.sh dev
+```
+
+Details: [Cloudflare Origin TLS + Linkerd](docs/linkerd-origin-tls.md).
+
 ## Documentation
 
 - [Architecture](docs/architecture.md)
 - [Bootstrap K3s (manual reference)](docs/bootstrap-k3s.md)
 - [Operations](docs/operations.md)
+- [Cloudflare Origin TLS + Linkerd](docs/linkerd-origin-tls.md)
 
 ## License
 

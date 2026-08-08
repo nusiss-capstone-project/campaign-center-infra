@@ -1,0 +1,16 @@
+---
+# Cloudflare Origin CA (or other origin) TLS secret for Traefik termination.
+# Cert/key files live under ansible/secrets/ (gitignored).
+
+origin_tls_secret_name: campaignhub-origin-tls
+
+# Directory relative to ansible/ containing tls.crt + tls.key
+# Override with ORIGIN_TLS_DIR env, or default: secrets/origin-tls.<env>
+origin_tls_cert_dir: ""
+
+# Namespaces that receive a copy of the TLS secret (Traefik reads secret in the IngressRoute ns)
+origin_tls_namespaces:
+  - headlamp
+
+# Create missing namespaces before applying the secret
+origin_tls_create_namespaces: true

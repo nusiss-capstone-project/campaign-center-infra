@@ -19,11 +19,12 @@ kafka_ui_ingressroute_name: kafka-ui
 kafka_ui_traefik_entrypoint: web
 kafka_ui_tls_enabled: false
 
-kafka_ui_memory_request: 128Mi
-kafka_ui_memory_limit: 256Mi
+# Spring Boot 3 / kafka-ui needs more than 256Mi or startup OOMKills (exit 137)
+kafka_ui_memory_request: 256Mi
+kafka_ui_memory_limit: 512Mi
 kafka_ui_cpu_request: 50m
-kafka_ui_cpu_limit: 200m
-kafka_ui_java_opts: "-Xmx128m -Xms64m"
+kafka_ui_cpu_limit: 500m
+kafka_ui_java_opts: "-Xmx256m -Xms128m"
 
 # Soft-prefer worker nodes; fall back to master when no worker exists.
 kafka_ui_prefer_worker_nodes: true

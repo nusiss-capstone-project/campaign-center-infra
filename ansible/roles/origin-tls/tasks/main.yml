@@ -1,0 +1,81 @@
+---
+- name: Resolve origin TLS certificate directory
+  ansible.builtin.set_fact:
+    origin_tls_cert_dir_resolved: >-
+      {{
+        origin_tls_cert_dir
+        if (origin_tls_cert_dir | default('') | length) > 0
+        else (
+          (lookup('env', 'ORIGIN_TLS_DIR') | default('', true))
+          if (lookup('env', 'ORIGIN_TLS_DIR') | default('', true) | length) > 0
+          else (playbook_dir + '/../secrets/origin-tls.' + (lookup('env', 'ENV') | default('dev', true)))
+        )
+      }}
+
+- name: Stat origin TLS certificate files
+  ansible.builtin.stat:
+    path: "{{ origin_tls_cert_dir_resolved }}/{{ item }}"
+  loop:
+    - tls.crt
+    - tls.key
+  register: origin_tls_files
+
+- name: Fail when origin TLS files are missing
+  ansible.builtin.assert:
+    that:
+      - item.stat.exists
+    fail_msg: >-
+      Missing {{ item.stat.path }}. Place Cloudflare Origin CA files at
+      {{ origin_tls_cert_dir_resolved }}/tls.crt and tls.key
+      (see docs/linkerd-origin-tls.md).
+  loop: "{{ origin_tls_files.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+
+- name: Read origin TLS certificate and key
+  ansible.builtin.slurp:
+    src: "{{ origin_tls_cert_dir_resolved }}/{{ item }}"
+  loop:
+    - tls.crt
+    - tls.key
+  register: origin_tls_slurp
+
+- name: Map slurped TLS materials
+  ansible.builtin.set_fact:
+    origin_tls_crt_b64: "{{ origin_tls_slurp.results | selectattr('item', 'equalto', 'tls.crt') | map(attribute='content') | first }}"
+    origin_tls_key_b64: "{{ origin_tls_slurp.results | selectattr('item', 'equalto', 'tls.key') | map(attribute='content') | first }}"
+
+- name: Ensure target namespaces exist
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ item }}"
+  loop: "{{ origin_tls_namespaces }}"
+  when: origin_tls_create_namespaces | bool
+
+- name: Apply origin TLS secret in each namespace
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: "{{ origin_tls_secret_name }}"
+        namespace: "{{ item }}"
+        labels:
+          app.kubernetes.io/name: origin-tls
+          app.kubernetes.io/part-of: campaign-center
+      type: kubernetes.io/tls
+      data:
+        tls.crt: "{{ origin_tls_crt_b64 }}"
+        tls.key: "{{ origin_tls_key_b64 }}"
+  loop: "{{ origin_tls_namespaces }}"
+
+- name: Show origin TLS summary
+  ansible.builtin.debug:
+    msg:
+      - "Secret {{ origin_tls_secret_name }} applied to: {{ origin_tls_namespaces | join(', ') }}"
+      - "Source: {{ origin_tls_cert_dir_resolved }}"

@@ -1,0 +1,174 @@
+---
+- name: Resolve Linkerd identity directory
+  ansible.builtin.set_fact:
+    linkerd_identity_dir_resolved: >-
+      {{
+        linkerd_identity_dir
+        if (linkerd_identity_dir | length) > 0
+        else (playbook_dir + '/../secrets/linkerd.' + (lookup('env', 'ENV') | default('dev', true)))
+      }}
+
+- name: Ensure Linkerd identity directory exists
+  ansible.builtin.file:
+    path: "{{ linkerd_identity_dir_resolved }}"
+    state: directory
+    mode: "0700"
+  when: linkerd_generate_identity_if_missing | bool
+
+- name: Generate Linkerd identity certificates if missing
+  ansible.builtin.command:
+    argv:
+      - bash
+      - "{{ role_path }}/files/generate-identity.sh"
+      - "{{ linkerd_identity_dir_resolved }}"
+      - "{{ linkerd_identity_trust_anchor_days }}"
+      - "{{ linkerd_identity_issuer_days }}"
+  register: linkerd_identity_generate
+  when: linkerd_generate_identity_if_missing | bool
+  changed_when: "'Generating Linkerd identity' in (linkerd_identity_generate.stdout | default(''))"
+
+- name: Stat required identity files
+  ansible.builtin.stat:
+    path: "{{ linkerd_identity_dir_resolved }}/{{ item }}"
+  loop:
+    - ca.crt
+    - issuer.crt
+    - issuer.key
+  register: linkerd_identity_files
+
+- name: Fail when identity files are missing
+  ansible.builtin.assert:
+    that:
+      - item.stat.exists
+    fail_msg: >-
+      Missing {{ item.stat.path }}. Place ECDSA P-256 Linkerd identity materials
+      under {{ linkerd_identity_dir_resolved }} or enable
+      linkerd_generate_identity_if_missing.
+  loop: "{{ linkerd_identity_files.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+
+- name: Slurp identity PEM files
+  ansible.builtin.slurp:
+    src: "{{ linkerd_identity_dir_resolved }}/{{ item }}"
+  loop:
+    - ca.crt
+    - issuer.crt
+    - issuer.key
+  register: linkerd_identity_slurp
+
+- name: Decode identity PEM into facts
+  ansible.builtin.set_fact:
+    linkerd_ca_crt_pem: "{{ (linkerd_identity_slurp.results | selectattr('item', 'equalto', 'ca.crt') | map(attribute='content') | first) | b64decode }}"
+    linkerd_issuer_crt_pem: "{{ (linkerd_identity_slurp.results | selectattr('item', 'equalto', 'issuer.crt') | map(attribute='content') | first) | b64decode }}"
+    linkerd_issuer_key_pem: "{{ (linkerd_identity_slurp.results | selectattr('item', 'equalto', 'issuer.key') | map(attribute='content') | first) | b64decode }}"
+
+- name: Resolve local chart paths
+  ansible.builtin.set_fact:
+    linkerd_crds_chart_resolved: >-
+      {{
+        linkerd_crds_chart_path
+        if (linkerd_crds_chart_path | default('') | length) > 0
+        else ('/tmp/linkerd-charts/linkerd-crds-' + linkerd_crds_chart_version + '.tgz')
+      }}
+    linkerd_control_plane_chart_resolved: >-
+      {{
+        linkerd_control_plane_chart_path
+        if (linkerd_control_plane_chart_path | default('') | length) > 0
+        else ('/tmp/linkerd-charts/linkerd-control-plane-' + linkerd_control_plane_chart_version + '.tgz')
+      }}
+
+- name: Stat local chart tarballs
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+    - "{{ linkerd_crds_chart_resolved }}"
+    - "{{ linkerd_control_plane_chart_resolved }}"
+  register: linkerd_local_charts
+
+- name: Set chart_ref facts (local tgz or Helm repo)
+  ansible.builtin.set_fact:
+    linkerd_crds_chart_ref: >-
+      {{
+        linkerd_crds_chart_resolved
+        if linkerd_local_charts.results[0].stat.exists
+        else (linkerd_helm_repo_name + '/' + linkerd_crds_chart_name)
+      }}
+    linkerd_control_plane_chart_ref: >-
+      {{
+        linkerd_control_plane_chart_resolved
+        if linkerd_local_charts.results[1].stat.exists
+        else (linkerd_helm_repo_name + '/' + linkerd_control_plane_chart_name)
+      }}
+    linkerd_use_local_charts: "{{ linkerd_local_charts.results[0].stat.exists and linkerd_local_charts.results[1].stat.exists }}"
+
+- name: Add Linkerd Helm repository
+  kubernetes.core.helm_repository:
+    name: "{{ linkerd_helm_repo_name }}"
+    repo_url: "{{ linkerd_helm_repo_url }}"
+  when: not (linkerd_use_local_charts | bool)
+
+- name: Refresh only the Linkerd edge Helm repo index
+  ansible.builtin.command: helm repo update {{ linkerd_helm_repo_name }}
+  register: linkerd_repo_update
+  changed_when: true
+  failed_when: false
+  when: not (linkerd_use_local_charts | bool)
+
+- name: Install Linkerd CRDs
+  kubernetes.core.helm:
+    name: "{{ linkerd_crds_release_name }}"
+    chart_ref: "{{ linkerd_crds_chart_ref }}"
+    chart_version: "{{ omit if (linkerd_use_local_charts | bool) else linkerd_crds_chart_version }}"
+    release_namespace: "{{ linkerd_namespace }}"
+    create_namespace: true
+    wait: true
+    wait_timeout: "{{ linkerd_wait_timeout }}"
+    update_repo_cache: false
+
+- name: Install Linkerd control plane with rendered values
+  block:
+    - name: Render Linkerd control-plane values
+      ansible.builtin.template:
+        src: values-control-plane.yaml.j2
+        dest: "/tmp/linkerd-control-plane-values-{{ lookup('env', 'ENV') | default('dev', true) }}.yaml"
+        mode: "0600"
+      register: linkerd_values_file
+
+    - name: Install Linkerd control plane
+      kubernetes.core.helm:
+        name: "{{ linkerd_control_plane_release_name }}"
+        chart_ref: "{{ linkerd_control_plane_chart_ref }}"
+        chart_version: "{{ omit if (linkerd_use_local_charts | bool) else linkerd_control_plane_chart_version }}"
+        release_namespace: "{{ linkerd_namespace }}"
+        create_namespace: true
+        wait: true
+        wait_timeout: "{{ linkerd_wait_timeout }}"
+        update_repo_cache: false
+        values_files:
+          - "{{ linkerd_values_file.dest }}"
+
+    - name: Wait for Linkerd control-plane pods
+      ansible.builtin.command: >-
+        kubectl wait --for=condition=Ready pods
+        -l linkerd.io/control-plane-ns={{ linkerd_namespace }}
+        -n {{ linkerd_namespace }}
+        --timeout=300s
+      environment:
+        KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+      changed_when: false
+  always:
+    - name: Remove rendered values file
+      ansible.builtin.file:
+        path: "/tmp/linkerd-control-plane-values-{{ lookup('env', 'ENV') | default('dev', true) }}.yaml"
+        state: absent
+
+- name: Show Linkerd install summary
+  ansible.builtin.debug:
+    msg:
+      - "Linkerd control plane installed in namespace {{ linkerd_namespace }}"
+      - "Charts: {{ linkerd_crds_chart_version }} / {{ linkerd_control_plane_chart_version }}"
+      - "Identity dir: {{ linkerd_identity_dir_resolved }}"
+      - "Prefer workers: {{ linkerd_prefer_worker_nodes }}"
+      - "Next: annotate app namespaces in GitOps with linkerd.io/inject=enabled"
+      - "Do not inject: kube-system, linkerd, messaging, vault, cert-manager, external-secrets, monitoring, argocd, headlamp"

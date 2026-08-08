@@ -1,0 +1,32 @@
+---
+linkerd_namespace: linkerd
+
+linkerd_helm_repo_name: linkerd-edge
+linkerd_helm_repo_url: https://helm.linkerd.io/edge
+
+# Pin matching edge chart versions (CRDs + control plane)
+linkerd_crds_chart_name: linkerd-crds
+linkerd_crds_chart_version: "2026.8.1"
+linkerd_crds_release_name: linkerd-crds
+
+linkerd_control_plane_chart_name: linkerd-control-plane
+linkerd_control_plane_chart_version: "2026.8.1"
+linkerd_control_plane_release_name: linkerd-control-plane
+
+# Prefer local chart tarballs when present (avoids flaky helm.linkerd.io / IPv6 resets).
+# Defaults: /tmp/linkerd-charts/linkerd-{crds,control-plane}-<version>.tgz
+# Override with LINKERD_CRDS_CHART / LINKERD_CONTROL_PLANE_CHART env vars.
+linkerd_crds_chart_path: ""
+linkerd_control_plane_chart_path: ""
+
+# Identity certs under ansible/secrets/linkerd.<env>/ (gitignored).
+# Generated automatically with openssl (ECDSA P-256) if missing.
+linkerd_identity_dir: ""
+linkerd_identity_trust_anchor_days: 3650
+linkerd_identity_issuer_days: 365
+linkerd_generate_identity_if_missing: true
+
+# Soft-prefer workers for control-plane Deployments
+linkerd_prefer_worker_nodes: true
+
+linkerd_wait_timeout: 10m

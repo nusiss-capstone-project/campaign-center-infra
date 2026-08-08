@@ -1,0 +1,154 @@
+---
+# DEV ONLY — Shamir unseal key in a K8s Secret + sidecar on vault-0.
+# Prefer AliCloud KMS auto-unseal for staging/prod.
+
+- name: Resolve unseal key file path
+  ansible.builtin.set_fact:
+    vault_unseal_key_file_resolved: >-
+      {{
+        vault_unseal_key_file
+        if (vault_unseal_key_file | default('') | length) > 0
+        else (
+          playbook_dir + '/../../vault-keys/'
+          + (lookup('env', 'ENV') | default('dev', true))
+          + '/unseal.key'
+        )
+      }}
+
+- name: Stat unseal key file
+  ansible.builtin.stat:
+    path: "{{ vault_unseal_key_file_resolved }}"
+  register: vault_unseal_key_stat
+
+- name: Fail when unseal key file is missing
+  ansible.builtin.assert:
+    that:
+      - vault_unseal_key_stat.stat.exists
+    fail_msg: >-
+      Unseal key not found at {{ vault_unseal_key_file_resolved }}.
+      Run vault-init.sh first, or set VAULT_UNSEAL_KEY_FILE / vault_unseal_key_file.
+
+- name: Read unseal key
+  ansible.builtin.slurp:
+    src: "{{ vault_unseal_key_file_resolved }}"
+  register: vault_unseal_key_slurp
+
+- name: Ensure Vault namespace exists
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ vault_namespace }}"
+
+- name: Apply vault-unseal-key Secret
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: "{{ vault_unseal_secret_name }}"
+        namespace: "{{ vault_namespace }}"
+        labels:
+          app.kubernetes.io/name: vault-unsealer
+          app.kubernetes.io/component: auto-unseal
+          app.kubernetes.io/part-of: campaign-center
+      type: Opaque
+      stringData: "{{ { vault_unseal_secret_key: (vault_unseal_key_slurp.content | b64decode | trim) } }}"
+
+- name: Add HashiCorp Helm repository
+  kubernetes.core.helm_repository:
+    name: hashicorp
+    repo_url: "{{ vault_helm_repo_url }}"
+
+- name: Render Vault Helm values (with unsealer sidecar)
+  ansible.builtin.template:
+    src: vault-values.yaml.j2
+    dest: "/tmp/vault-values-{{ vault_release_name }}-unsealer.yaml"
+    mode: "0600"
+
+- name: Upgrade Vault Helm release to enable unsealer sidecar
+  block:
+    - name: Helm upgrade with unsealer values
+      kubernetes.core.helm:
+        name: "{{ vault_release_name }}"
+        chart_ref: hashicorp/vault
+        chart_version: "{{ vault_helm_chart_version }}"
+        release_namespace: "{{ vault_namespace }}"
+        create_namespace: true
+        wait: false
+        update_repo_cache: false
+        reset_values: false
+        reuse_values: true
+        values_files:
+          - "/tmp/vault-values-{{ vault_release_name }}-unsealer.yaml"
+  rescue:
+    - name: Orphan-delete StatefulSet so pod template can gain sidecar (PVC kept)
+      ansible.builtin.command: >-
+        kubectl delete statefulset {{ vault_release_name }}
+        -n {{ vault_namespace }} --cascade=orphan
+      environment:
+        KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+      register: vault_sts_orphan_delete
+      changed_when: vault_sts_orphan_delete.rc == 0
+      failed_when: false
+
+    - name: Delete orphan vault-0 so new StatefulSet can recreate it
+      ansible.builtin.command: >-
+        kubectl delete pod {{ vault_release_name }}-0
+        -n {{ vault_namespace }} --wait=false
+      environment:
+        KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+      failed_when: false
+
+    - name: Retry Helm upgrade after orphan-delete
+      kubernetes.core.helm:
+        name: "{{ vault_release_name }}"
+        chart_ref: hashicorp/vault
+        chart_version: "{{ vault_helm_chart_version }}"
+        release_namespace: "{{ vault_namespace }}"
+        create_namespace: true
+        wait: false
+        update_repo_cache: false
+        reset_values: false
+        reuse_values: true
+        values_files:
+          - "/tmp/vault-values-{{ vault_release_name }}-unsealer.yaml"
+
+- name: Remove rendered values file
+  ansible.builtin.file:
+    path: "/tmp/vault-values-{{ vault_release_name }}-unsealer.yaml"
+    state: absent
+
+- name: Recreate vault-0 so it picks up the unsealer sidecar
+  ansible.builtin.command: >-
+    kubectl delete pod {{ vault_release_name }}-0 -n {{ vault_namespace }} --wait=false
+  environment:
+    KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+  register: vault_pod_recreate
+  changed_when: vault_pod_recreate.rc == 0
+  failed_when: false
+
+- name: Wait for vault-0 to include unsealer container
+  ansible.builtin.command: >-
+    kubectl get pod {{ vault_release_name }}-0 -n {{ vault_namespace }}
+    -o jsonpath='{.spec.containers[*].name}'
+  environment:
+    KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+  register: vault_pod_containers
+  until: >-
+    vault_pod_containers.rc == 0
+    and ('unsealer' in vault_pod_containers.stdout)
+  retries: 48
+  delay: 5
+  changed_when: false
+
+- name: Show unsealer summary
+  ansible.builtin.debug:
+    msg:
+      - "Vault unsealer sidecar enabled (DEV ONLY — key in Secret {{ vault_unseal_secret_name }})"
+      - "Containers on {{ vault_release_name }}-0: {{ vault_pod_containers.stdout }}"
+      - "If CronJob unsealer was installed, remove it: ./ansible/scripts/vault-install-unsealer-cronjob.sh uninstall"
+      - "Verify: kubectl -n {{ vault_namespace }} logs {{ vault_release_name }}-0 -c unsealer --tail=20"

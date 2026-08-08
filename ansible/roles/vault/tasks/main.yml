@@ -20,11 +20,12 @@
       kubernetes.core.helm:
         name: "{{ vault_release_name }}"
         chart_ref: hashicorp/vault
+        chart_version: "{{ vault_helm_chart_version }}"
         release_namespace: "{{ vault_namespace }}"
         create_namespace: true
         # Vault stays Not Ready until init/unseal — do not wait for readiness probe
         wait: false
-        update_repo_cache: true
+        update_repo_cache: false
         # Do not reset — avoids patching immutable StatefulSet fields (PVC template)
         reset_values: false
         reuse_values: true
@@ -84,6 +85,7 @@
       - "  ./ansible/scripts/vault-init.sh <env>"
       - "  ./ansible/scripts/vault-unseal.sh <env>"
       - "  ./ansible/scripts/vault-bootstrap.sh <env>"
+      - "  ./ansible/scripts/configure-vault-unsealer.sh <env>  # optional sidecar auto-unseal (dev)"
       - ""
       - "See README-Vault.md for architecture and GitOps integration."
 

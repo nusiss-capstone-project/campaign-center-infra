@@ -1,0 +1,40 @@
+---
+- name: Install Linkerd control plane into K3s cluster
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  become: false
+  vars:
+    linkerd_identity_dir: "{{ lookup('env', 'LINKERD_IDENTITY_DIR') | default('', true) }}"
+    linkerd_prefer_worker_nodes: "{{ lookup('env', 'LINKERD_PREFER_WORKERS') | default('true', true) | bool }}"
+    linkerd_crds_chart_path: "{{ lookup('env', 'LINKERD_CRDS_CHART') | default('', true) }}"
+    linkerd_control_plane_chart_path: "{{ lookup('env', 'LINKERD_CONTROL_PLANE_CHART') | default('', true) }}"
+  pre_tasks:
+    - name: Validate KUBECONFIG is set
+      ansible.builtin.assert:
+        that:
+          - lookup('env', 'KUBECONFIG') | length > 0
+        fail_msg: >-
+          KUBECONFIG is not set. Export KUBECONFIG to kubeconfigs/<env>.yaml.
+
+    - name: Validate kubeconfig file exists
+      ansible.builtin.stat:
+        path: "{{ lookup('env', 'KUBECONFIG') }}"
+      register: kubeconfig_file
+
+    - name: Fail when kubeconfig file is missing
+      ansible.builtin.assert:
+        that:
+          - kubeconfig_file.stat.exists
+        fail_msg: >-
+          Kubeconfig not found at {{ lookup('env', 'KUBECONFIG') }}.
+          Run ./ansible/scripts/install-k3s.sh <env> first.
+
+    - name: Require openssl for identity generation
+      ansible.builtin.command: openssl version
+      register: openssl_version
+      changed_when: false
+      failed_when: openssl_version.rc != 0
+
+  roles:
+    - linkerd

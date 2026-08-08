@@ -3,6 +3,7 @@
   kubernetes.core.helm_repository:
     name: headlamp
     repo_url: "{{ headlamp_helm_repo_url }}"
+  when: not (headlamp_skip_helm | bool)
 
 - name: Install Headlamp
   kubernetes.core.helm:
@@ -12,7 +13,8 @@
     create_namespace: true
     wait: true
     wait_timeout: 5m
-    update_repo_cache: true
+    # Avoid full `helm repo update` (all local repos); often hangs on laptop networks
+    update_repo_cache: false
     values:
       config:
         inCluster: true
@@ -25,6 +27,7 @@
         limits:
           cpu: 500m
           memory: 256Mi
+  when: not (headlamp_skip_helm | bool)
 
 - name: Wait for Headlamp deployment to be available
   ansible.builtin.command: >-

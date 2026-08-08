@@ -51,5 +51,12 @@ kubeconfigs/*.yaml
 
 # Vault init keys (never commit)
 vault-keys/
+
+# Grafana Cloud / other local secrets (keep *.example and *.example/ dirs)
+ansible/secrets/**
+!ansible/secrets/**/*.example
+!ansible/secrets/**/*.example/**
+!ansible/secrets/.gitkeep
+
 # local store
 .DS_Store

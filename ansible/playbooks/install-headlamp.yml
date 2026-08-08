@@ -7,6 +7,9 @@
   vars:
     master_public_ip: "{{ hostvars[groups['k3s_servers'][0]].ansible_host }}"
     headlamp_host: "{{ lookup('env', 'HEADLAMP_HOST') | default('headlamp.' + master_public_ip + '.sslip.io', true) }}"
+    headlamp_tls_enabled: "{{ lookup('env', 'HEADLAMP_TLS') | default('false', true) | bool }}"
+    headlamp_tls_secret_name: "{{ lookup('env', 'HEADLAMP_TLS_SECRET') | default('campaignhub-origin-tls', true) }}"
+    headlamp_skip_helm: "{{ lookup('env', 'HEADLAMP_SKIP_HELM') | default('false', true) | bool }}"
   pre_tasks:
     - name: Validate KUBECONFIG is set
       ansible.builtin.assert:
@@ -37,7 +40,9 @@
 
     - name: Show Headlamp hostname
       ansible.builtin.debug:
-        msg: "Headlamp URL: http://{{ headlamp_host }}"
+        msg: >-
+          Headlamp URL:
+          {{ 'https' if (headlamp_tls_enabled | bool) else 'http' }}://{{ headlamp_host }}
 
   roles:
     - headlamp

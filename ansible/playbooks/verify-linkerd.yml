@@ -1,0 +1,88 @@
+---
+- name: Verify Linkerd control plane
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  become: false
+  vars:
+    linkerd_namespace: linkerd
+  pre_tasks:
+    - name: Validate KUBECONFIG is set
+      ansible.builtin.assert:
+        that:
+          - lookup('env', 'KUBECONFIG') | length > 0
+        fail_msg: KUBECONFIG is not set.
+
+  tasks:
+    - name: Get Linkerd control-plane pods
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Pod
+        namespace: "{{ linkerd_namespace }}"
+        label_selectors:
+          - linkerd.io/control-plane-ns={{ linkerd_namespace }}
+      register: linkerd_pods
+
+    - name: Fail when no control-plane pods exist
+      ansible.builtin.assert:
+        that:
+          - linkerd_pods.resources | length > 0
+        fail_msg: >-
+          No Linkerd control-plane pods in {{ linkerd_namespace }}.
+          Run ./ansible/scripts/install-linkerd.sh <env>.
+
+    - name: Assert control-plane pods are Ready
+      ansible.builtin.assert:
+        that:
+          - >
+            item.status.conditions
+            | selectattr('type', 'equalto', 'Ready')
+            | selectattr('status', 'equalto', 'True')
+            | list
+            | length > 0
+        fail_msg: "Pod {{ item.metadata.name }} is not Ready"
+      loop: "{{ linkerd_pods.resources }}"
+      loop_control:
+        label: "{{ item.metadata.name }}"
+
+    - name: Check Linkerd Helm releases
+      ansible.builtin.command: helm list -n {{ linkerd_namespace }} -o json
+      environment:
+        KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+      register: linkerd_helm_list
+      changed_when: false
+
+    - name: Assert expected Helm releases are deployed
+      ansible.builtin.assert:
+        that:
+          - linkerd_helm_list.stdout | from_json | selectattr('name', 'equalto', 'linkerd-crds') | list | length == 1
+          - linkerd_helm_list.stdout | from_json | selectattr('name', 'equalto', 'linkerd-control-plane') | list | length == 1
+          - (linkerd_helm_list.stdout | from_json | selectattr('name', 'equalto', 'linkerd-control-plane') | map(attribute='status') | first) == 'deployed'
+        fail_msg: "Expected linkerd-crds and linkerd-control-plane releases in deployed state"
+
+    - name: Detect linkerd CLI
+      ansible.builtin.command: bash -c 'command -v linkerd'
+      register: linkerd_cli
+      changed_when: false
+      failed_when: false
+
+    - name: Run linkerd check when CLI is available
+      ansible.builtin.command: linkerd check --proxy=false
+      environment:
+        KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+      register: linkerd_check
+      changed_when: false
+      failed_when: false
+      when: linkerd_cli.rc == 0
+
+    - name: Show Linkerd verify summary
+      ansible.builtin.debug:
+        msg:
+          - "Control-plane pods: {{ linkerd_pods.resources | length }} Ready"
+          - "Helm: linkerd-crds + linkerd-control-plane deployed"
+          - >-
+            linkerd check:
+            {% if linkerd_cli.rc != 0 %}skipped (CLI not installed)
+            {% elif (linkerd_check.rc | default(1)) == 0 %}ok
+            {% else %}warnings/failures — inspect with: linkerd check
+            {% endif %}

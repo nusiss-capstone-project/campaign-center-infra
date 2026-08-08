@@ -8,7 +8,7 @@ spec:
   entryPoints:
     - websecure
   tls:
-    secretName: {{ headlamp_ingressroute_name }}-tls
+    secretName: {{ headlamp_tls_secret_name }}
 {% else %}
   entryPoints:
     - {{ headlamp_traefik_entrypoint }}

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Install full dev platform stack: Traefik → Headlamp → Kafka → Kafka UI → Argo CD
+# Optional (not included): configure-origin-tls.sh, install-linkerd.sh — see docs/linkerd-origin-tls.md
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

@@ -1,0 +1,33 @@
+---
+- name: Configure Vault sidecar auto-unseal (dev only)
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  become: false
+  vars:
+    vault_unsealer_sidecar_enabled: true
+    vault_unseal_key_file: "{{ lookup('env', 'VAULT_UNSEAL_KEY_FILE') | default('', true) }}"
+  pre_tasks:
+    - name: Validate KUBECONFIG is set
+      ansible.builtin.assert:
+        that:
+          - lookup('env', 'KUBECONFIG') | length > 0
+        fail_msg: >-
+          KUBECONFIG is not set. Export KUBECONFIG to kubeconfigs/<env>.yaml.
+
+    - name: Validate kubeconfig file exists
+      ansible.builtin.stat:
+        path: "{{ lookup('env', 'KUBECONFIG') }}"
+      register: kubeconfig_file
+
+    - name: Fail when kubeconfig file is missing
+      ansible.builtin.assert:
+        that:
+          - kubeconfig_file.stat.exists
+        fail_msg: Kubeconfig not found.
+
+  tasks:
+    - name: Apply Vault unsealer sidecar
+      ansible.builtin.include_role:
+        name: vault
+        tasks_from: unsealer.yml

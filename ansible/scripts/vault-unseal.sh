@@ -9,7 +9,7 @@ usage() {
   echo "Usage: $(basename "$0") <env>"
   echo ""
   echo "Unseals vault-0 using vault-keys/<env>/unseal.key or VAULT_UNSEAL_KEY."
-  echo "Re-run after every pod restart until auto-unseal is configured (not enabled in dev)."
+  echo "For reboot auto-unseal (dev), prefer: ./ansible/scripts/configure-vault-unsealer.sh <env>"
   echo ""
   echo "Example: $(basename "$0") dev"
   exit 1

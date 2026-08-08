@@ -29,5 +29,6 @@
   ansible.builtin.debug:
     msg:
       - "Headlamp exposed via Traefik"
-      - "URL: http://{{ headlamp_host }}"
+      - "URL: {{ 'https' if (headlamp_tls_enabled | bool) else 'http' }}://{{ headlamp_host }}"
+      - "TLS: {{ headlamp_tls_enabled }} (secret={{ headlamp_tls_secret_name }})"
       - "Backend: {{ headlamp_service_name }}.{{ headlamp_namespace }}:{{ headlamp_service_port }}"
