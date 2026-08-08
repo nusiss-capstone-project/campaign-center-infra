@@ -14,6 +14,12 @@ variable "environment" {
   type        = string
 }
 
+variable "name_suffix" {
+  description = "Optional suffix for EIP name (e.g. worker-2) when creating multiple EIPs"
+  type        = string
+  default     = ""
+}
+
 variable "attachment_mode" {
   description = "EIP attachment mode: 'ecs' attaches to an ECS instance; 'slb' reserves EIP for future SLB use"
   type        = string

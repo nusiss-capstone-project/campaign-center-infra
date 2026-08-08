@@ -112,6 +112,30 @@ variable "create_eip" {
   default     = true
 }
 
+variable "create_worker_eips" {
+  description = "Create and attach an EIP to each K3s worker (outbound internet / external DB)."
+  type        = bool
+  default     = true
+}
+
+variable "worker_eip_keys" {
+  description = <<-EOT
+    Logical worker keys that should get a managed EIP (e.g. ["worker-2"]).
+    Empty list = all workers. Use to skip a worker that already has a manual EIP.
+  EOT
+  type        = list(string)
+  default     = []
+}
+
+variable "worker_public_ip_overrides" {
+  description = <<-EOT
+    Optional public IPs by worker index (0 = worker-1) for inventory when an EIP
+    is managed outside Terraform. Empty string / missing index = use TF EIP only.
+  EOT
+  type        = list(string)
+  default     = []
+}
+
 variable "common_tags" {
   description = "Additional common tags"
   type        = map(string)

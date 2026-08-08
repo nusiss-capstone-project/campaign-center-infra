@@ -78,3 +78,28 @@ module "k3s_master_eip" {
   bandwidth       = var.eip_bandwidth
   common_tags     = local.common_tags
 }
+
+locals {
+  worker_instance_ids_by_key = {
+    for k, id in module.ecs_k3s_nodes.instance_ids : k => id if startswith(k, "worker-")
+  }
+  worker_eip_targets = var.create_worker_eips ? (
+    length(var.worker_eip_keys) > 0
+    ? { for k, id in local.worker_instance_ids_by_key : k => id if contains(var.worker_eip_keys, k) }
+    : local.worker_instance_ids_by_key
+  ) : {}
+}
+
+module "k3s_worker_eips" {
+  for_each = local.worker_eip_targets
+  source   = "../../modules/eip"
+
+  enabled         = true
+  project_name    = var.project_name
+  environment     = var.environment
+  name_suffix     = each.key
+  attachment_mode = "ecs"
+  ecs_instance_id = each.value
+  bandwidth       = var.eip_bandwidth
+  common_tags     = local.common_tags
+}

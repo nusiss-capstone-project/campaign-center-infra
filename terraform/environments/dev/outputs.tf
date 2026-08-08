@@ -88,7 +88,27 @@ output "worker_private_ips" {
   value       = module.ecs_k3s_nodes.worker_private_ips
 }
 
+locals {
+  worker_public_ips_resolved = [
+    for idx in range(length(module.ecs_k3s_nodes.worker_private_ips)) :
+    coalesce(
+      try(module.k3s_worker_eips["worker-${idx + 1}"].eip_address, null),
+      (
+        length(var.worker_public_ip_overrides) > idx && var.worker_public_ip_overrides[idx] != ""
+        ? var.worker_public_ip_overrides[idx]
+        : null
+      ),
+      ""
+    )
+  ]
+}
+
 output "worker_public_ips" {
-  description = "Public IPs of K3s worker nodes (empty until per-node EIP is added)"
-  value       = []
+  description = "Public EIPs of K3s workers (index-aligned with worker_private_ips; empty string if none)"
+  value       = local.worker_public_ips_resolved
+}
+
+output "k3s_worker_public_ips" {
+  description = "Alias of worker_public_ips for inventory scripts"
+  value       = local.worker_public_ips_resolved
 }

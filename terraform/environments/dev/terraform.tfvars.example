@@ -40,3 +40,6 @@ system_disk_performance_level = ""
 eip_attachment_mode = "ecs"
 eip_bandwidth       = 5
 create_eip          = false # set true after Alibaba Cloud real-name verification
+create_worker_eips  = true  # EIP per worker for outbound (external DB, installs)
+# worker_eip_keys = ["worker-2"]  # optional: only manage EIP for listed workers
+# worker_public_ip_overrides = ["x.x.x.x"]  # inventory-only IPs for manual EIPs

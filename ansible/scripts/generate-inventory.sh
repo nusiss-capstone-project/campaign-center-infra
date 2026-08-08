@@ -148,8 +148,10 @@ if [[ ! -f "${SSH_KEY}" ]]; then
   exit 1
 fi
 echo "==> Using SSH key: ${SSH_KEY}"
-K3S_VERSION="${K3S_VERSION:-v1.30.5+k3s1}"
+# Match the live cluster version unless overridden (old default v1.30.5 drifts from master).
+K3S_VERSION="${K3S_VERSION:-v1.35.5+k3s1}"
 FIRST_MASTER_PRIVATE="$(echo "${MASTER_PRIVATE_IPS}" | jq -r '.[0]')"
+FIRST_MASTER_PUBLIC="$(echo "${MASTER_PUBLIC_IPS}" | jq -r '.[0]')"
 
 pad2() { printf '%02d' "$1"; }
 
@@ -205,13 +207,18 @@ EOF
         [[ -z "${pub}" || "${pub}" == "null" ]] && pub="${priv}"
       else
         pub="${priv}"
-        echo "# NOTE: worker-${idx} has no public IP; using private IP" >&2
+        echo "# NOTE: worker-${idx} has no public IP; using private IP + ProxyJump via master" >&2
+      fi
+      # Workers without a public IP are only reachable via the master EIP.
+      jump_args=""
+      if [[ "${pub}" == "${priv}" && -n "${FIRST_MASTER_PUBLIC}" && "${FIRST_MASTER_PUBLIC}" != "null" ]]; then
+        jump_args=$'\n'"          ansible_ssh_common_args: \"-o ProxyJump=root@${FIRST_MASTER_PUBLIC} -o StrictHostKeyChecking=no\""
       fi
       cat <<EOF
         worker-${idx}:
           ansible_host: ${pub}
           private_ip: ${priv}
-          node_role: agent
+          node_role: agent${jump_args}
 EOF
     done
   fi

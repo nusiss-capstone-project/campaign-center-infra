@@ -13,7 +13,11 @@ locals {
 resource "alicloud_eip_address" "this" {
   count = var.enabled ? 1 : 0
 
-  address_name         = "${local.name_prefix}-eip"
+  address_name = (
+    var.name_suffix != ""
+    ? "${local.name_prefix}-eip-${var.name_suffix}"
+    : "${local.name_prefix}-eip"
+  )
   bandwidth            = var.bandwidth
   internet_charge_type = var.internet_charge_type
   tags                 = local.tags
