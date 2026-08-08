@@ -24,3 +24,6 @@ kafka_ui_memory_limit: 256Mi
 kafka_ui_cpu_request: 50m
 kafka_ui_cpu_limit: 200m
 kafka_ui_java_opts: "-Xmx128m -Xms64m"
+
+# Soft-prefer worker nodes; fall back to master when no worker exists.
+kafka_ui_prefer_worker_nodes: true

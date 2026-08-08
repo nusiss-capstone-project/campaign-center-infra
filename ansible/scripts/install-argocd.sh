@@ -59,6 +59,12 @@ echo "==> Verifying Argo CD (env=${ENV})"
 ansible-playbook -i "inventories/${ENV}/hosts.yml" playbooks/verify-argocd.yml
 
 echo ""
+echo "==> Argo CD pod placement (prefer worker / non control-plane)"
+kubectl get pods -n argocd -o wide
+
+echo ""
 echo "Done. Argo CD UI: https://argocd.<master_public_ip>.sslip.io (or your ARGOCD_HOST)"
 echo "  kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d"
 echo "  export KUBECONFIG=${KUBECONFIG_PATH}"
+echo ""
+echo "Node scheduling: soft-prefer worker; fall back to master when no worker is available."

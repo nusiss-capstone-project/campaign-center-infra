@@ -21,6 +21,13 @@ kafka_memory_limit: 768Mi
 kafka_cpu_request: 100m
 kafka_cpu_limit: 500m
 
+# Soft-prefer worker nodes; fall back to master when no worker exists.
+kafka_prefer_worker_nodes: true
+# local-path PVCs are node-bound. When true and the broker is on control-plane
+# while a Ready worker exists, delete pod+PVC so it can reschedule onto the worker
+# (dev data loss on that volume is expected).
+kafka_migrate_off_control_plane: true
+
 # JVM heap (keep below memory limit for dev single broker)
 kafka_heap_opts: "-Xmx512m -Xms256m"
 

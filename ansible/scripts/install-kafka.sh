@@ -53,8 +53,15 @@ echo "==> Verifying Kafka (env=${ENV})"
 ansible-playbook -i "inventories/${ENV}/hosts.yml" playbooks/verify-kafka.yml
 
 echo ""
+echo "==> Kafka pod placement (soft-prefer worker)"
+kubectl get pods -n messaging -l app.kubernetes.io/name=kafka -o wide || true
+
+echo ""
 echo "Done. In-cluster bootstrap:"
 echo "  kafka.messaging.svc.cluster.local:9092"
+echo ""
+echo "Node scheduling: soft-prefer worker; fall back to master when no worker is available."
+echo "Note: migrating off control-plane recreates the local-path PVC (dev topic data wiped)."
 echo ""
 echo "Local dev (from laptop):"
 echo "  kubectl port-forward -n messaging svc/kafka 9092:9092"

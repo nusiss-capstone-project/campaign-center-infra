@@ -32,12 +32,29 @@
 - name: Expose Kafka UI through Traefik
   ansible.builtin.import_tasks: routing.yml
 
-- name: Wait for Kafka UI deployment to be available
+# Deployment pod-template changes (affinity) already trigger a rolling update.
+- name: Wait for Kafka UI rollout
   ansible.builtin.command: >-
-    kubectl wait --for=condition=Available deployment/{{ kafka_ui_app_name }}
-    -n {{ kafka_ui_namespace }} --timeout=300s
+    kubectl -n {{ kafka_ui_namespace }} rollout status
+    deployment/{{ kafka_ui_app_name }} --timeout=300s
   environment:
     KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+  changed_when: false
+
+- name: Show Kafka UI placement
+  ansible.builtin.command: >
+    kubectl get pods -n {{ kafka_ui_namespace }}
+    -l app.kubernetes.io/name={{ kafka_ui_app_name }}
+    -o wide --no-headers
+  environment:
+    KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+  register: kafka_ui_pod_wide
+  changed_when: false
+  failed_when: false
+
+- name: Print Kafka UI placement
+  ansible.builtin.debug:
+    msg: "Kafka UI placement: {{ kafka_ui_pod_wide.stdout | default('unknown') }}"
   changed_when: false
 
 - name: Run Kafka UI validation tasks

@@ -18,6 +18,25 @@ spec:
         app.kubernetes.io/name: {{ kafka_ui_app_name }}
         app.kubernetes.io/component: ui
     spec:
+{% if kafka_ui_prefer_worker_nodes | bool %}
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: node-role.kubernetes.io/control-plane
+                    operator: DoesNotExist
+                  - key: node-role.kubernetes.io/master
+                    operator: DoesNotExist
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+        - key: node-role.kubernetes.io/master
+          operator: Exists
+          effect: NoSchedule
+{% endif %}
       containers:
         - name: kafka-ui
           image: {{ kafka_ui_image }}

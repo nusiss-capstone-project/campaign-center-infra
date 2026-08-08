@@ -1,6 +1,6 @@
 ---
 - name: Get Argo CD pods
-  ansible.builtin.command: kubectl get pods -n {{ argocd_namespace }}
+  ansible.builtin.command: kubectl get pods -n {{ argocd_namespace }} -o wide
   environment:
     KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
   register: argocd_pods

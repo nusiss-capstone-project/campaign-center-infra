@@ -1,8 +1,13 @@
-# Argo CD Helm values — single-node k3s dev cluster
+# Argo CD Helm values — single-node / small k3s cluster
 # Chart: argo/argo-cd — https://argoproj.github.io/argo-helm
 
 global:
   domain: {{ argocd_host }}
+{% if argocd_prefer_worker_nodes | bool %}
+{% filter indent(2, true) %}
+{% include '_node_placement.j2' %}
+{% endfilter %}
+{% endif %}
 
 configs:
   params:
@@ -33,6 +38,11 @@ server:
     limits:
       cpu: {{ argocd_server_cpu_limit }}
       memory: {{ argocd_server_memory_limit }}
+{% if argocd_prefer_worker_nodes | bool %}
+{% filter indent(2, true) %}
+{% include '_node_placement.j2' %}
+{% endfilter %}
+{% endif %}
 
 controller:
   replicas: 1
@@ -43,6 +53,11 @@ controller:
     limits:
       cpu: {{ argocd_controller_cpu_limit }}
       memory: {{ argocd_controller_memory_limit }}
+{% if argocd_prefer_worker_nodes | bool %}
+{% filter indent(2, true) %}
+{% include '_node_placement.j2' %}
+{% endfilter %}
+{% endif %}
 
 repoServer:
   replicas: 1
@@ -53,6 +68,11 @@ repoServer:
     limits:
       cpu: {{ argocd_repo_server_cpu_limit }}
       memory: {{ argocd_repo_server_memory_limit }}
+{% if argocd_prefer_worker_nodes | bool %}
+{% filter indent(2, true) %}
+{% include '_node_placement.j2' %}
+{% endfilter %}
+{% endif %}
 
 applicationSet:
   enabled: false
@@ -65,6 +85,18 @@ dex:
 
 redis:
   enabled: true
+  resources:
+    requests:
+      cpu: {{ argocd_redis_cpu_request }}
+      memory: {{ argocd_redis_memory_request }}
+    limits:
+      cpu: {{ argocd_redis_cpu_limit }}
+      memory: {{ argocd_redis_memory_limit }}
+{% if argocd_prefer_worker_nodes | bool %}
+{% filter indent(2, true) %}
+{% include '_node_placement.j2' %}
+{% endfilter %}
+{% endif %}
 
 redis-ha:
   enabled: false

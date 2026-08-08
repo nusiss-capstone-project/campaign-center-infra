@@ -24,6 +24,43 @@
     fail_msg: >-
       argocd_host is empty. Set ARGOCD_HOST or ensure inventory has a master public IP.
 
+# Informational only — affinity stays soft (preferred) so master remains a fallback.
+- name: List cluster nodes for Argo CD placement
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Node
+  register: argocd_cluster_nodes
+  when: argocd_prefer_worker_nodes | bool
+
+- name: Init Ready worker list
+  ansible.builtin.set_fact:
+    argocd_ready_workers: []
+  when: argocd_prefer_worker_nodes | bool
+
+- name: Collect Ready worker nodes (exclude control-plane/master)
+  ansible.builtin.set_fact:
+    argocd_ready_workers: "{{ argocd_ready_workers + [item.metadata.name] }}"
+  loop: "{{ argocd_cluster_nodes.resources }}"
+  loop_control:
+    label: "{{ item.metadata.name }}"
+  when:
+    - argocd_prefer_worker_nodes | bool
+    - ('node-role.kubernetes.io/control-plane' not in (item.metadata.labels | default({})))
+    - ('node-role.kubernetes.io/master' not in (item.metadata.labels | default({})))
+    - >
+      (item.status.conditions | default([])
+       | selectattr('type', 'equalto', 'Ready')
+       | selectattr('status', 'equalto', 'True')
+       | list | length) > 0
+
+- name: Show Argo CD node placement plan
+  ansible.builtin.debug:
+    msg: >-
+      Worker affinity mode={{ argocd_worker_affinity_mode }} (soft prefer; master fallback);
+      Ready workers={{ argocd_ready_workers | default([]) | join(', ') or 'none' }};
+      controller memory request/limit={{ argocd_controller_memory_request }}/{{ argocd_controller_memory_limit }}
+  when: argocd_prefer_worker_nodes | bool
+
 - name: Add Argo Helm repository
   kubernetes.core.helm_repository:
     name: argo
@@ -41,9 +78,10 @@
     chart_ref: argo/argo-cd
     release_namespace: "{{ argocd_namespace }}"
     create_namespace: true
-    wait: true
-    wait_timeout: 10m
-    update_repo_cache: true
+    # Don't block 10m on OOM loops — reschedule + wait tasks handle readiness
+    wait: false
+    # helm repo update often hangs on flaky networks; repo is added above
+    update_repo_cache: false
     values_files:
       - "/tmp/argocd-values-{{ argocd_release_name }}.yaml"
 
@@ -55,6 +93,60 @@
     KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
   changed_when: false
 
+- name: Reschedule Argo CD pods onto preferred nodes
+  ansible.builtin.shell: |
+    set -euo pipefail
+    kubectl -n "{{ argocd_namespace }}" get deploy,statefulset \
+      -l app.kubernetes.io/instance={{ argocd_release_name }} \
+      -o name | while read -r obj; do
+      kubectl -n "{{ argocd_namespace }}" rollout restart "${obj}"
+    done
+    # StatefulSet rollout can leave a CrashLooping ordinal on the old node;
+    # force recreate so the new template (affinity/resources) is applied.
+    kubectl -n "{{ argocd_namespace }}" delete pod \
+      -l app.kubernetes.io/name=argocd-application-controller \
+      --wait=false --ignore-not-found
+  args:
+    executable: /bin/bash
+  environment:
+    KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+  when:
+    - argocd_prefer_worker_nodes | bool
+    - argocd_reschedule_after_upgrade | bool
+  register: argocd_rollout_restart
+  changed_when: argocd_rollout_restart.rc == 0
+
+# Helm often leaves this Deployment when applicationSet.enabled flips to false.
+- name: Remove leftover ApplicationSet controller
+  kubernetes.core.k8s:
+    api_version: apps/v1
+    kind: Deployment
+    name: "{{ argocd_release_name }}-applicationset-controller"
+    namespace: "{{ argocd_namespace }}"
+    state: absent
+  when: not (argocd_applicationset_enabled | default(false) | bool)
+
+# Do not kubectl-wait on pods by instance label: that also matches Completed Job
+# pods (redis-secret-init) and deleted/terminating pods from rollout restart,
+# which never become Ready and block until --timeout (was 600s).
+- name: Wait for Argo CD workloads after reschedule
+  ansible.builtin.shell: |
+    set -euo pipefail
+    ns="{{ argocd_namespace }}"
+    timeout="180s"
+    kubectl -n "${ns}" rollout status deploy/{{ argocd_release_name }}-server --timeout="${timeout}"
+    kubectl -n "${ns}" rollout status deploy/{{ argocd_release_name }}-repo-server --timeout="${timeout}"
+    kubectl -n "${ns}" rollout status deploy/{{ argocd_release_name }}-redis --timeout="${timeout}"
+    kubectl -n "${ns}" rollout status statefulset/{{ argocd_release_name }}-application-controller --timeout="${timeout}"
+  args:
+    executable: /bin/bash
+  environment:
+    KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+  when:
+    - argocd_prefer_worker_nodes | bool
+    - argocd_reschedule_after_upgrade | bool
+  changed_when: false
+
 - name: Bootstrap root GitOps Application
   ansible.builtin.import_tasks: bootstrap.yml
   when: argocd_bootstrap_root_app | bool
@@ -64,6 +156,7 @@
     msg:
       - "Argo CD installed (namespace {{ argocd_namespace }})"
       - "UI: https://{{ argocd_host }}"
+      - "Prefer worker nodes: {{ argocd_prefer_worker_nodes }}"
       - "Login user: admin"
       - "Initial password:"
       - "  kubectl -n {{ argocd_namespace }} get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d"

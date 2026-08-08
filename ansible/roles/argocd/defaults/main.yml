@@ -13,6 +13,15 @@ argocd_ingress_tls_enabled: true
 argocd_ingress_entrypoint: websecure
 argocd_cluster_issuer: ""
 
+# Soft-prefer non-control-plane nodes; fall back to master when no worker exists
+# (or worker is down). Use "required" only if you want a hard pin to workers.
+argocd_prefer_worker_nodes: true
+argocd_worker_affinity_mode: preferred
+# After Helm upgrade, restart deployments so pods reschedule with new affinity
+argocd_reschedule_after_upgrade: true
+# Keep in sync with values.yaml.j2 applicationSet.enabled
+argocd_applicationset_enabled: false
+
 # Root Application (app-of-apps)
 argocd_root_app_name: campaign-gitops-root
 argocd_gitops_repo_url: https://github.com/nusiss-capstone-project/campaign-gitops
@@ -22,16 +31,20 @@ argocd_gitops_destination_server: https://kubernetes.default.svc
 argocd_gitops_destination_namespace: argocd
 argocd_bootstrap_root_app: true
 
-# Dev single-node resource limits
+# Sized for worker node (requests schedule; limits avoid OOM without reserving 1.5Gi on master)
 argocd_server_memory_request: 128Mi
-argocd_server_memory_limit: 256Mi
+argocd_server_memory_limit: 512Mi
 argocd_server_cpu_request: 50m
 argocd_server_cpu_limit: 500m
 argocd_controller_memory_request: 256Mi
-argocd_controller_memory_limit: 512Mi
+argocd_controller_memory_limit: 1Gi
 argocd_controller_cpu_request: 100m
-argocd_controller_cpu_limit: 500m
+argocd_controller_cpu_limit: "1"
 argocd_repo_server_memory_request: 128Mi
-argocd_repo_server_memory_limit: 256Mi
+argocd_repo_server_memory_limit: 512Mi
 argocd_repo_server_cpu_request: 50m
 argocd_repo_server_cpu_limit: 500m
+argocd_redis_memory_request: 32Mi
+argocd_redis_memory_limit: 128Mi
+argocd_redis_cpu_request: 25m
+argocd_redis_cpu_limit: 200m

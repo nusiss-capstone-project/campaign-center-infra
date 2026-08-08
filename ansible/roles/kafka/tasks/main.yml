@@ -25,6 +25,139 @@
     state: present
     template: statefulset.yaml.j2
 
+- name: List cluster nodes for Kafka placement
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Node
+  register: kafka_cluster_nodes
+  when:
+    - kafka_prefer_worker_nodes | bool
+    - kafka_migrate_off_control_plane | bool
+
+- name: Init Ready worker list for Kafka
+  ansible.builtin.set_fact:
+    kafka_ready_workers: []
+  when:
+    - kafka_prefer_worker_nodes | bool
+    - kafka_migrate_off_control_plane | bool
+
+- name: Collect Ready worker nodes for Kafka
+  ansible.builtin.set_fact:
+    kafka_ready_workers: "{{ kafka_ready_workers + [item.metadata.name] }}"
+  loop: "{{ kafka_cluster_nodes.resources }}"
+  loop_control:
+    label: "{{ item.metadata.name }}"
+  when:
+    - kafka_prefer_worker_nodes | bool
+    - kafka_migrate_off_control_plane | bool
+    - ('node-role.kubernetes.io/control-plane' not in (item.metadata.labels | default({})))
+    - ('node-role.kubernetes.io/master' not in (item.metadata.labels | default({})))
+    - >
+      (item.status.conditions | default([])
+       | selectattr('type', 'equalto', 'Ready')
+       | selectattr('status', 'equalto', 'True')
+       | list | length) > 0
+
+- name: Get current Kafka broker pod
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    name: "{{ kafka_app_name }}-0"
+    namespace: "{{ kafka_namespace }}"
+  register: kafka_broker_pod
+  when:
+    - kafka_prefer_worker_nodes | bool
+    - kafka_migrate_off_control_plane | bool
+    - kafka_ready_workers | default([]) | length > 0
+
+- name: Resolve Kafka broker node name
+  ansible.builtin.set_fact:
+    kafka_broker_node_name: "{{ kafka_broker_pod.resources[0].spec.nodeName | default('') }}"
+  when:
+    - kafka_prefer_worker_nodes | bool
+    - kafka_migrate_off_control_plane | bool
+    - kafka_ready_workers | default([]) | length > 0
+    - kafka_broker_pod.resources | default([]) | length > 0
+
+- name: Look up Kafka broker node
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Node
+    name: "{{ kafka_broker_node_name }}"
+  register: kafka_broker_node
+  when:
+    - kafka_prefer_worker_nodes | bool
+    - kafka_migrate_off_control_plane | bool
+    - kafka_broker_node_name | default('') | length > 0
+
+- name: Migrate Kafka off control-plane (recreate local-path PVC)
+  when:
+    - kafka_prefer_worker_nodes | bool
+    - kafka_migrate_off_control_plane | bool
+    - kafka_ready_workers | default([]) | length > 0
+    - kafka_broker_node_name | default('') | length > 0
+    - >
+        ('node-role.kubernetes.io/control-plane' in (kafka_broker_node.resources[0].metadata.labels | default({})))
+        or ('node-role.kubernetes.io/master' in (kafka_broker_node.resources[0].metadata.labels | default({})))
+  block:
+    - name: Warn about Kafka volume recreate
+      ansible.builtin.debug:
+        msg: >-
+          Kafka broker is on {{ kafka_broker_node_name }}; recreating PVC data-{{ kafka_app_name }}-0
+          so it can soft-prefer worker (local-path is node-bound; topic data on that volume is wiped).
+
+    # Scale to 0 first so the STS does not recreate the pod before PVC delete.
+    - name: Scale Kafka StatefulSet to 0
+      ansible.builtin.command: >
+        kubectl -n {{ kafka_namespace }} scale statefulset/{{ kafka_app_name }}
+        --replicas=0
+      environment:
+        KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+
+    - name: Wait until Kafka broker pod is gone
+      ansible.builtin.command: >
+        kubectl -n {{ kafka_namespace }} wait --for=delete
+        pod/{{ kafka_app_name }}-0 --timeout=180s
+      environment:
+        KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+      register: kafka_pod_delete_wait
+      failed_when: false
+      changed_when: false
+
+    - name: Delete Kafka data PVC bound to control-plane
+      kubernetes.core.k8s:
+        api_version: v1
+        kind: PersistentVolumeClaim
+        name: "data-{{ kafka_app_name }}-0"
+        namespace: "{{ kafka_namespace }}"
+        state: absent
+        wait: true
+        wait_timeout: 180
+
+    - name: Scale Kafka StatefulSet back to 1
+      ansible.builtin.command: >
+        kubectl -n {{ kafka_namespace }} scale statefulset/{{ kafka_app_name }}
+        --replicas=1
+      environment:
+        KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+
+- name: Wait for Kafka pod to appear
+  ansible.builtin.shell: |
+    set -euo pipefail
+    for _ in $(seq 1 60); do
+      if kubectl -n "{{ kafka_namespace }}" get pod "{{ kafka_app_name }}-0" >/dev/null 2>&1; then
+        exit 0
+      fi
+      sleep 2
+    done
+    echo "ERROR: pod {{ kafka_app_name }}-0 not created" >&2
+    exit 1
+  args:
+    executable: /bin/bash
+  environment:
+    KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+  changed_when: false
+
 - name: Wait for Kafka pod to be ready
   ansible.builtin.command: >-
     kubectl wait --for=condition=Ready pod/{{ kafka_app_name }}-0
@@ -33,11 +166,23 @@
     KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
   changed_when: false
 
+- name: Show Kafka broker placement
+  ansible.builtin.command: >
+    kubectl get pod {{ kafka_app_name }}-0 -n {{ kafka_namespace }}
+    -o wide --no-headers
+  environment:
+    KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+  register: kafka_pod_wide
+  changed_when: false
+  failed_when: false
+
 - name: Show Kafka cluster-internal endpoint
   ansible.builtin.debug:
     msg:
       - "Kafka installed (dev, single broker, KRaft, cluster-internal only)"
       - "Bootstrap (in-cluster): {{ kafka_bootstrap }}"
+      - "Placement: {{ kafka_pod_wide.stdout | default('unknown') }}"
+      - "Prefer worker (soft): {{ kafka_prefer_worker_nodes }}"
       - "Local access: kubectl port-forward -n {{ kafka_namespace }} svc/{{ kafka_service_name }} {{ kafka_client_port }}:{{ kafka_client_port }}"
       - "CLI inside pod: kubectl exec -n {{ kafka_namespace }} {{ kafka_app_name }}-0 -- /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:{{ kafka_client_port }} --list"
       - "Not exposed via Traefik or NodePort"

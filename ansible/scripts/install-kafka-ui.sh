@@ -57,6 +57,11 @@ echo "==> Verifying Kafka UI (env=${ENV})"
 ansible-playbook -i "inventories/${ENV}/hosts.yml" playbooks/verify-kafka-ui.yml
 
 echo ""
+echo "==> Kafka UI pod placement (soft-prefer worker)"
+kubectl get pods -n messaging -l app.kubernetes.io/name=kafka-ui -o wide || true
+
+echo ""
 echo "Done. Open Kafka UI:"
 echo "  http://kafka.<master_public_ip>.sslip.io  (or your KAFKA_UI_HOST)"
 echo "  export KUBECONFIG=${KUBECONFIG_PATH}"
+echo "Node scheduling: soft-prefer worker; fall back to master when no worker is available."

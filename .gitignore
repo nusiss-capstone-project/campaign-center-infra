@@ -51,3 +51,5 @@ kubeconfigs/*.yaml
 
 # Vault init keys (never commit)
 vault-keys/
+# local store
+.DS_Store
