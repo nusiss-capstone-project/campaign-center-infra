@@ -1,0 +1,57 @@
+---
+- name: Check whether Argo Rollouts Helm release exists
+  ansible.builtin.command: >-
+    helm status {{ argo_rollouts_release_name }}
+    -n {{ argo_rollouts_namespace }}
+  environment:
+    KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+  register: argo_rollouts_helm_status
+  failed_when: false
+  changed_when: false
+
+- name: Uninstall Argo Rollouts Helm release
+  kubernetes.core.helm:
+    name: "{{ argo_rollouts_release_name }}"
+    release_namespace: "{{ argo_rollouts_namespace }}"
+    state: absent
+    wait: true
+  when: argo_rollouts_helm_status.rc == 0
+
+- name: Skip message when Helm release is already gone
+  ansible.builtin.debug:
+    msg: "Helm release {{ argo_rollouts_release_name }} not found in {{ argo_rollouts_namespace }}; continuing cleanup."
+  when: argo_rollouts_helm_status.rc != 0
+
+- name: Delete Argo Rollouts namespace
+  kubernetes.core.k8s:
+    api_version: v1
+    kind: Namespace
+    name: "{{ argo_rollouts_namespace }}"
+    state: absent
+    wait: true
+    wait_timeout: 300
+
+- name: Delete Argo Rollouts CRDs (explicit opt-in only)
+  kubernetes.core.k8s:
+    api_version: apiextensions.k8s.io/v1
+    kind: CustomResourceDefinition
+    name: "{{ item }}"
+    state: absent
+    wait: false
+  loop: "{{ argo_rollouts_crds }}"
+  when: argo_rollouts_delete_crds | bool
+
+- name: Warn when CRDs were left in place
+  ansible.builtin.debug:
+    msg:
+      - "Argo Rollouts CRDs were NOT deleted (default)."
+      - "Cluster Rollout/Analysis CRs (if any) remain."
+      - "To also remove CRDs: CONFIRM_DELETE_CRDS=true ./ansible/scripts/configure-argo-rollouts.sh <env> uninstall"
+  when: not (argo_rollouts_delete_crds | bool)
+
+- name: Show Argo Rollouts uninstall summary
+  ansible.builtin.debug:
+    msg:
+      - "Argo Rollouts uninstalled"
+      - "Namespace {{ argo_rollouts_namespace }} removed"
+      - "CRDs deleted: {{ argo_rollouts_delete_crds }}"

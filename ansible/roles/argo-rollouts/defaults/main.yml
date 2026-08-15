@@ -1,0 +1,33 @@
+---
+argo_rollouts_enabled: true
+argo_rollouts_namespace: argo-rollouts
+argo_rollouts_release_name: argo-rollouts
+argo_rollouts_helm_repo_url: https://argoproj.github.io/argo-helm
+# Pin when you need reproducible installs; empty = chart repo latest.
+argo_rollouts_chart_version: ""
+
+# Soft-prefer non-control-plane nodes (same pattern as Argo CD)
+argo_rollouts_prefer_worker_nodes: true
+argo_rollouts_worker_affinity_mode: preferred
+argo_rollouts_reschedule_after_upgrade: true
+
+# Optional dashboard (disabled by default — controller only)
+argo_rollouts_dashboard_enabled: false
+
+argo_rollouts_controller_replicas: 1
+argo_rollouts_controller_memory_request: 64Mi
+argo_rollouts_controller_memory_limit: 256Mi
+argo_rollouts_controller_cpu_request: 50m
+argo_rollouts_controller_cpu_limit: 200m
+
+# Uninstall: leave CRDs by default (Rollout CRs elsewhere stay).
+# Set CONFIRM_DELETE_CRDS=true on uninstall to also remove Rollouts CRDs.
+argo_rollouts_delete_crds: false
+
+# Rollouts-owned CRDs only (never Applications / AppProjects / etc.)
+argo_rollouts_crds:
+  - rollouts.argoproj.io
+  - analysisruns.argoproj.io
+  - analysistemplates.argoproj.io
+  - clusteranalysistemplates.argoproj.io
+  - experiments.argoproj.io

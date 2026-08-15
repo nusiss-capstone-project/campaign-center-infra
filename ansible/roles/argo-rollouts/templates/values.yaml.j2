@@ -1,0 +1,77 @@
+# Argo Rollouts — controller (and optional dashboard)
+installCRDs: true
+
+controller:
+  replicas: {{ argo_rollouts_controller_replicas }}
+  resources:
+    requests:
+      cpu: {{ argo_rollouts_controller_cpu_request }}
+      memory: {{ argo_rollouts_controller_memory_request }}
+    limits:
+      cpu: {{ argo_rollouts_controller_cpu_limit }}
+      memory: {{ argo_rollouts_controller_memory_limit }}
+{% if argo_rollouts_prefer_worker_nodes | bool %}
+{% if argo_rollouts_worker_affinity_mode == 'required' %}
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: node-role.kubernetes.io/control-plane
+                operator: DoesNotExist
+              - key: node-role.kubernetes.io/master
+                operator: DoesNotExist
+{% else %}
+  affinity:
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          preference:
+            matchExpressions:
+              - key: node-role.kubernetes.io/control-plane
+                operator: DoesNotExist
+              - key: node-role.kubernetes.io/master
+                operator: DoesNotExist
+{% endif %}
+  tolerations:
+    - key: node-role.kubernetes.io/control-plane
+      operator: Exists
+      effect: NoSchedule
+    - key: node-role.kubernetes.io/master
+      operator: Exists
+      effect: NoSchedule
+{% endif %}
+
+dashboard:
+  enabled: {{ argo_rollouts_dashboard_enabled | bool | lower }}
+{% if argo_rollouts_dashboard_enabled | bool and argo_rollouts_prefer_worker_nodes | bool %}
+{% if argo_rollouts_worker_affinity_mode == 'required' %}
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: node-role.kubernetes.io/control-plane
+                operator: DoesNotExist
+              - key: node-role.kubernetes.io/master
+                operator: DoesNotExist
+{% else %}
+  affinity:
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          preference:
+            matchExpressions:
+              - key: node-role.kubernetes.io/control-plane
+                operator: DoesNotExist
+              - key: node-role.kubernetes.io/master
+                operator: DoesNotExist
+{% endif %}
+  tolerations:
+    - key: node-role.kubernetes.io/control-plane
+      operator: Exists
+      effect: NoSchedule
+    - key: node-role.kubernetes.io/master
+      operator: Exists
+      effect: NoSchedule
+{% endif %}

@@ -1,0 +1,12 @@
+---
+- name: Skip Argo Rollouts when disabled
+  ansible.builtin.meta: end_play
+  when: not (argo_rollouts_enabled | bool)
+
+- name: Install Argo Rollouts controller
+  ansible.builtin.import_tasks: install.yml
+  when: (argo_rollouts_state | default('present')) == 'present'
+
+- name: Uninstall Argo Rollouts controller
+  ansible.builtin.import_tasks: uninstall.yml
+  when: (argo_rollouts_state | default('present')) == 'absent'

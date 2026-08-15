@@ -1,0 +1,77 @@
+---
+- name: Add Argo Helm repository
+  kubernetes.core.helm_repository:
+    name: argo
+    repo_url: "{{ argo_rollouts_helm_repo_url }}"
+
+- name: Render Argo Rollouts Helm values
+  ansible.builtin.template:
+    src: values.yaml.j2
+    dest: "/tmp/argo-rollouts-values-{{ argo_rollouts_release_name }}.yaml"
+    mode: "0600"
+
+- name: Install Argo Rollouts
+  kubernetes.core.helm:
+    name: "{{ argo_rollouts_release_name }}"
+    chart_ref: argo/argo-rollouts
+    chart_version: "{{ argo_rollouts_chart_version if (argo_rollouts_chart_version | length) > 0 else omit }}"
+    release_namespace: "{{ argo_rollouts_namespace }}"
+    create_namespace: true
+    # Don't block 10m inside Helm (API/image-pull flakes); wait with kubectl below.
+    wait: false
+    update_repo_cache: false
+    values_files:
+      - "/tmp/argo-rollouts-values-{{ argo_rollouts_release_name }}.yaml"
+
+- name: Reschedule Argo Rollouts pods onto preferred nodes
+  ansible.builtin.shell: |
+    set -euo pipefail
+    kubectl -n "{{ argo_rollouts_namespace }}" get deploy \
+      -l app.kubernetes.io/instance={{ argo_rollouts_release_name }} \
+      -o name | while read -r obj; do
+      kubectl -n "{{ argo_rollouts_namespace }}" rollout restart "${obj}"
+    done
+  args:
+    executable: /bin/bash
+  environment:
+    KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+  when:
+    - argo_rollouts_prefer_worker_nodes | bool
+    - argo_rollouts_reschedule_after_upgrade | bool
+  register: argo_rollouts_restart
+  changed_when: argo_rollouts_restart.rc == 0
+
+- name: Wait for Argo Rollouts controller Deployments
+  ansible.builtin.shell: |
+    set -euo pipefail
+    ns="{{ argo_rollouts_namespace }}"
+    # Brief settle for API / image pull after helm apply
+    sleep 5
+    deploys="$(kubectl -n "${ns}" get deploy \
+      -l app.kubernetes.io/instance={{ argo_rollouts_release_name }} \
+      -o name 2>/dev/null || true)"
+    if [[ -z "${deploys}" ]]; then
+      echo "ERROR: no Deployments found in ${ns} for release {{ argo_rollouts_release_name }}" >&2
+      kubectl -n "${ns}" get all,events -o wide >&2 || true
+      exit 1
+    fi
+    while read -r obj; do
+      [[ -z "${obj}" ]] && continue
+      kubectl -n "${ns}" rollout status "${obj}" --timeout=300s
+    done <<< "${deploys}"
+  args:
+    executable: /bin/bash
+  environment:
+    KUBECONFIG: "{{ lookup('env', 'KUBECONFIG') }}"
+  changed_when: false
+  register: argo_rollouts_wait
+  failed_when: argo_rollouts_wait.rc != 0
+
+- name: Show Argo Rollouts install summary
+  ansible.builtin.debug:
+    msg:
+      - "Argo Rollouts installed (namespace {{ argo_rollouts_namespace }})"
+      - "Release: {{ argo_rollouts_release_name }}"
+      - "Dashboard: {{ argo_rollouts_dashboard_enabled }}"
+      - "Prefer workers: {{ argo_rollouts_prefer_worker_nodes }}"
+      - "kubectl -n {{ argo_rollouts_namespace }} get pods -o wide"

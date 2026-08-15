@@ -1,0 +1,34 @@
+---
+- name: Install Argo Rollouts controller
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  become: false
+  vars:
+    argo_rollouts_state: present
+    argo_rollouts_prefer_worker_nodes: "{{ lookup('env', 'ARGO_ROLLOUTS_PREFER_WORKERS') | default('true', true) | bool }}"
+    argo_rollouts_dashboard_enabled: "{{ lookup('env', 'ARGO_ROLLOUTS_DASHBOARD') | default('false', true) | bool }}"
+    argo_rollouts_chart_version: "{{ lookup('env', 'ARGO_ROLLOUTS_CHART_VERSION') | default('', true) }}"
+  pre_tasks:
+    - name: Validate KUBECONFIG is set
+      ansible.builtin.assert:
+        that:
+          - lookup('env', 'KUBECONFIG') | length > 0
+        fail_msg: >-
+          KUBECONFIG is not set. Run configure-argo-rollouts.sh or export
+          KUBECONFIG to kubeconfigs/<env>.yaml.
+
+    - name: Validate kubeconfig file exists
+      ansible.builtin.stat:
+        path: "{{ lookup('env', 'KUBECONFIG') }}"
+      register: kubeconfig_file
+
+    - name: Fail when kubeconfig file is missing
+      ansible.builtin.assert:
+        that:
+          - kubeconfig_file.stat.exists
+        fail_msg: >-
+          Kubeconfig not found. Run ./ansible/scripts/install-k3s.sh <env> first.
+
+  roles:
+    - argo-rollouts

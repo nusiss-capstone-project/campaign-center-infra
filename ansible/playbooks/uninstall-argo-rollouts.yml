@@ -1,0 +1,46 @@
+---
+- name: Uninstall Argo Rollouts controller
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  become: false
+  vars:
+    argo_rollouts_state: absent
+    argo_rollouts_delete_crds: "{{ lookup('env', 'CONFIRM_DELETE_CRDS') | default('false', true) | bool }}"
+  pre_tasks:
+    - name: Require CONFIRM_UNINSTALL=true
+      ansible.builtin.assert:
+        that:
+          - lookup('env', 'CONFIRM_UNINSTALL') | default('') == 'true'
+        fail_msg: >-
+          Refusing uninstall without CONFIRM_UNINSTALL=true.
+          Example: CONFIRM_UNINSTALL=true ./ansible/scripts/configure-argo-rollouts.sh <env> uninstall
+
+    - name: Validate KUBECONFIG is set
+      ansible.builtin.assert:
+        that:
+          - lookup('env', 'KUBECONFIG') | length > 0
+        fail_msg: >-
+          KUBECONFIG is not set. Export KUBECONFIG to kubeconfigs/<env>.yaml.
+
+    - name: Validate kubeconfig file exists
+      ansible.builtin.stat:
+        path: "{{ lookup('env', 'KUBECONFIG') }}"
+      register: kubeconfig_file
+
+    - name: Fail when kubeconfig file is missing
+      ansible.builtin.assert:
+        that:
+          - kubeconfig_file.stat.exists
+        fail_msg: >-
+          Kubeconfig not found at {{ lookup('env', 'KUBECONFIG') }}.
+
+    - name: Warn about CRD deletion scope
+      ansible.builtin.debug:
+        msg: >-
+          CONFIRM_DELETE_CRDS=true — will delete Rollouts CRDs only
+          (rollouts/analysis*/experiments). Will NOT touch Applications CRDs.
+      when: argo_rollouts_delete_crds | bool
+
+  roles:
+    - argo-rollouts
