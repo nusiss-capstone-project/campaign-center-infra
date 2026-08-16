@@ -1,0 +1,1261 @@
+{
+  "version": 4,
+  "terraform_version": "1.13.3",
+  "serial": 11,
+  "lineage": "74d449aa-ef86-85a8-38ab-04b4578481d8",
+  "outputs": {
+    "available_vswitch_zones": {
+      "value": [
+        "ap-southeast-1a",
+        "ap-southeast-1b",
+        "ap-southeast-1c",
+        "ap-southeast-1d"
+      ],
+      "type": [
+        "list",
+        "string"
+      ]
+    },
+    "configured_region": {
+      "value": "ap-southeast-1",
+      "type": "string"
+    },
+    "configured_zones": {
+      "value": [
+        "ap-southeast-1a"
+      ],
+      "type": [
+        "list",
+        "string"
+      ]
+    },
+    "create_eip": {
+      "value": true,
+      "type": "bool"
+    },
+    "k3s_master_instance_ids": {
+      "value": [
+        "i-t4n3nk1jytydey5xdu5q"
+      ],
+      "type": [
+        "tuple",
+        [
+          "string"
+        ]
+      ]
+    },
+    "k3s_master_private_ips": {
+      "value": [
+        "10.10.1.241"
+      ],
+      "type": [
+        "tuple",
+        [
+          "string"
+        ]
+      ]
+    },
+    "k3s_master_public_ip": {
+      "value": "8.219.134.169",
+      "type": "string"
+    },
+    "k3s_worker_instance_ids": {
+      "value": [
+        "i-t4n65c4ylmk7uqluppjh",
+        "i-t4naov26kpaqg8sgu184"
+      ],
+      "type": [
+        "tuple",
+        [
+          "string",
+          "string"
+        ]
+      ]
+    },
+    "k3s_worker_public_ips": {
+      "value": [
+        "",
+        "47.236.138.247"
+      ],
+      "type": [
+        "tuple",
+        [
+          "string",
+          "string"
+        ]
+      ]
+    },
+    "master_private_ips": {
+      "value": [
+        "10.10.1.241"
+      ],
+      "type": [
+        "tuple",
+        [
+          "string"
+        ]
+      ]
+    },
+    "master_public_ips": {
+      "value": [
+        "8.219.134.169"
+      ],
+      "type": [
+        "list",
+        "string"
+      ]
+    },
+    "node_availability_zones": {
+      "value": {
+        "master-1": "ap-southeast-1a",
+        "worker-1": "ap-southeast-1a",
+        "worker-2": "ap-southeast-1a"
+      },
+      "type": [
+        "object",
+        {
+          "master-1": "string",
+          "worker-1": "string",
+          "worker-2": "string"
+        }
+      ]
+    },
+    "security_group_id": {
+      "value": "sg-t4n0y017l01btspvtmpd",
+      "type": "string"
+    },
+    "ssh_command": {
+      "value": "ssh -i \u003cpath-to-private-key\u003e root@8.219.134.169",
+      "type": "string"
+    },
+    "vpc_id": {
+      "value": "vpc-t4n38d5l9thkewdkh69ol",
+      "type": "string"
+    },
+    "vswitch_id": {
+      "value": "vsw-t4nb8ir60mior6qv4gmx9",
+      "type": "string"
+    },
+    "vswitch_ids": {
+      "value": {
+        "ap-southeast-1a": "vsw-t4nb8ir60mior6qv4gmx9"
+      },
+      "type": [
+        "object",
+        {
+          "ap-southeast-1a": "string"
+        }
+      ]
+    },
+    "worker_private_ips": {
+      "value": [
+        "10.10.1.242",
+        "10.10.1.243"
+      ],
+      "type": [
+        "tuple",
+        [
+          "string",
+          "string"
+        ]
+      ]
+    },
+    "worker_public_ips": {
+      "value": [
+        "",
+        "47.236.138.247"
+      ],
+      "type": [
+        "tuple",
+        [
+          "string",
+          "string"
+        ]
+      ]
+    }
+  },
+  "resources": [
+    {
+      "module": "module.ecs_k3s_nodes",
+      "mode": "managed",
+      "type": "alicloud_instance",
+      "name": "k3s_nodes",
+      "provider": "provider[\"registry.terraform.io/aliyun/alicloud\"]",
+      "instances": [
+        {
+          "index_key": "master-1",
+          "schema_version": 0,
+          "attributes": {
+            "allocate_public_ip": null,
+            "auto_release_time": "",
+            "auto_renew_period": 0,
+            "availability_zone": "ap-southeast-1a",
+            "cpu": 2,
+            "cpu_options": [
+              {
+                "core_count": 1,
+                "threads_per_core": 2,
+                "topology_type": ""
+              }
+            ],
+            "create_time": "2026-06-20T02:54Z",
+            "credit_specification": "Standard",
+            "data_disks": [],
+            "dedicated_host_id": "",
+            "deletion_protection": false,
+            "deployment_set_group_no": null,
+            "deployment_set_id": "",
+            "description": "",
+            "dry_run": false,
+            "enable_jumbo_frame": false,
+            "expired_time": "2099-12-31T15:59Z",
+            "force_delete": null,
+            "host_name": "campaign-center-dev-k3s-master-1",
+            "hpc_cluster_id": "",
+            "http_endpoint": "",
+            "http_put_response_hop_limit": 0,
+            "http_tokens": "",
+            "id": "i-t4n3nk1jytydey5xdu5q",
+            "image_id": "ubuntu_22_04_x64_20G_alibase_20260522.vhd",
+            "image_options": [
+              {
+                "login_as_non_root": false
+              }
+            ],
+            "include_data_disks": null,
+            "instance_charge_type": "PostPaid",
+            "instance_name": "campaign-center-dev-k3s-master-1",
+            "instance_type": "ecs.t6-c1m2.large",
+            "internet_charge_type": "",
+            "internet_max_bandwidth_in": -1,
+            "internet_max_bandwidth_out": 0,
+            "io_optimized": null,
+            "ipv6_address_count": 0,
+            "ipv6_addresses": [],
+            "is_outdated": null,
+            "key_name": "campaign-center-key",
+            "kms_encrypted_password": null,
+            "kms_encryption_context": null,
+            "launch_template_id": null,
+            "launch_template_name": null,
+            "launch_template_version": null,
+            "maintenance_action": "AutoRecover",
+            "maintenance_notify": false,
+            "maintenance_time": [],
+            "memory": 4096,
+            "network_card_index": null,
+            "network_interface_id": "eni-t4n3nk1jytydey603l7s",
+            "network_interface_traffic_mode": "Standard",
+            "network_interfaces": [],
+            "operator_type": null,
+            "os_name": "Ubuntu  22.04 64位",
+            "os_type": "linux",
+            "password": "",
+            "password_inherit": null,
+            "period": null,
+            "period_unit": "",
+            "primary_ip_address": "10.10.1.241",
+            "private_ip": "10.10.1.241",
+            "private_pool_options_id": "",
+            "private_pool_options_match_criteria": "None",
+            "public_ip": "",
+            "queue_pair_number": 0,
+            "renewal_status": "",
+            "resource_group_id": "",
+            "role_name": "",
+            "secondary_private_ip_address_count": 0,
+            "secondary_private_ips": [],
+            "security_enhancement_strategy": null,
+            "security_groups": [
+              "sg-t4n0y017l01btspvtmpd"
+            ],
+            "spot_duration": 0,
+            "spot_interruption_behavior": "",
+            "spot_price_limit": 0,
+            "spot_strategy": "NoSpot",
+            "start_time": "2026-08-15T05:09Z",
+            "status": "Running",
+            "stopped_mode": "Not-applicable",
+            "subnet_id": "vsw-t4nb8ir60mior6qv4gmx9",
+            "system_disk_auto_snapshot_policy_id": "",
+            "system_disk_bursting_enabled": false,
+            "system_disk_category": "cloud_auto",
+            "system_disk_description": "",
+            "system_disk_encrypt_algorithm": null,
+            "system_disk_encrypted": false,
+            "system_disk_id": "d-t4n9eo8l9viptx4fpmyg",
+            "system_disk_kms_key_id": "",
+            "system_disk_name": "",
+            "system_disk_performance_level": "",
+            "system_disk_provisioned_iops": 0,
+            "system_disk_size": 60,
+            "system_disk_storage_cluster_id": "",
+            "tags": {
+              "Name": "campaign-center-dev-k3s-master-1",
+              "environment": "dev",
+              "managed_by": "terraform",
+              "project": "campaign-center",
+              "role": "master",
+              "zone": "ap-southeast-1a"
+            },
+            "timeouts": null,
+            "user_data": "I2Nsb3VkLWNvbmZpZwpwYWNrYWdlX3VwZGF0ZTogdHJ1ZQpwYWNrYWdlX3VwZ3JhZGU6IGZhbHNlCgp0aW1lem9uZTogQXNpYS9TaW5nYXBvcmUKCnBhY2thZ2VzOgogIC0gY3VybAogIC0gd2dldAogIC0gdmltCiAgLSBnaXQKICAtIGh0b3AKICAtIGpxCiAgLSB1bnppcAogIC0gY2EtY2VydGlmaWNhdGVzCiAgLSBnbnVwZwogIC0gbHNvZgogIC0gbmV0LXRvb2xzCgp3cml0ZV9maWxlczoKICAtIHBhdGg6IC9ldGMvbW90ZAogICAgcGVybWlzc2lvbnM6ICIwNjQ0IgogICAgY29udGVudDogfAogICAgICBjYW1wYWlnbi1jZW50ZXIgbm9kZSAobWFzdGVyKQogICAgICBFbnZpcm9ubWVudDogZGV2CiAgICAgIE1hbmFnZWQgYnkgVGVycmFmb3JtIGNsb3VkLWluaXQuCgogIC0gcGF0aDogL2V0Yy9jYW1wYWlnbi1jZW50ZXItbm9kZQogICAgcGVybWlzc2lvbnM6ICIwNjQ0IgogICAgY29udGVudDogfAogICAgICByb2xlPW1hc3RlcgogICAgICBlbnZpcm9ubWVudD1kZXYKICAgICAgcHJvamVjdD1jYW1wYWlnbi1jZW50ZXIKCnJ1bmNtZDoKICAtIGVjaG8gIkJhc2ljIG5vZGUgaW5pdGlhbGl6YXRpb24gY29tcGxldGUuIg==",
+            "volume_tags": {},
+            "vpc_id": "vpc-t4n38d5l9thkewdkh69ol",
+            "vswitch_id": "vsw-t4nb8ir60mior6qv4gmx9"
+          },
+          "sensitive_attributes": [
+            [
+              {
+                "type": "get_attr",
+                "value": "password"
+              }
+            ]
+          ],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo2MDAwMDAwMDAwMDAsImRlbGV0ZSI6MTIwMDAwMDAwMDAwMCwidXBkYXRlIjo2MDAwMDAwMDAwMDB9fQ==",
+          "dependencies": [
+            "module.network.alicloud_vpc.this",
+            "module.network.alicloud_vswitch.this",
+            "module.network.data.alicloud_zones.vswitch",
+            "module.security_group.alicloud_security_group.this"
+          ]
+        },
+        {
+          "index_key": "worker-1",
+          "schema_version": 0,
+          "attributes": {
+            "allocate_public_ip": null,
+            "auto_release_time": "",
+            "auto_renew_period": 0,
+            "availability_zone": "ap-southeast-1a",
+            "cpu": 2,
+            "cpu_options": [
+              {
+                "core_count": 1,
+                "threads_per_core": 2,
+                "topology_type": ""
+              }
+            ],
+            "create_time": "2026-07-18T06:37Z",
+            "credit_specification": "Standard",
+            "data_disks": [],
+            "dedicated_host_id": "",
+            "deletion_protection": false,
+            "deployment_set_group_no": null,
+            "deployment_set_id": "",
+            "description": "",
+            "dry_run": false,
+            "enable_jumbo_frame": false,
+            "expired_time": "2099-12-31T15:59Z",
+            "force_delete": null,
+            "host_name": "campaign-center-dev-k3s-worker-1",
+            "hpc_cluster_id": "",
+            "http_endpoint": "",
+            "http_put_response_hop_limit": 0,
+            "http_tokens": "",
+            "id": "i-t4n65c4ylmk7uqluppjh",
+            "image_id": "ubuntu_22_04_x64_20G_alibase_20260522.vhd",
+            "image_options": [
+              {
+                "login_as_non_root": false
+              }
+            ],
+            "include_data_disks": null,
+            "instance_charge_type": "PostPaid",
+            "instance_name": "campaign-center-dev-k3s-worker-1",
+            "instance_type": "ecs.t6-c1m2.large",
+            "internet_charge_type": "",
+            "internet_max_bandwidth_in": -1,
+            "internet_max_bandwidth_out": 0,
+            "io_optimized": null,
+            "ipv6_address_count": 0,
+            "ipv6_addresses": [],
+            "is_outdated": null,
+            "key_name": "campaign-center-key",
+            "kms_encrypted_password": null,
+            "kms_encryption_context": null,
+            "launch_template_id": null,
+            "launch_template_name": null,
+            "launch_template_version": null,
+            "maintenance_action": "AutoRecover",
+            "maintenance_notify": false,
+            "maintenance_time": [],
+            "memory": 4096,
+            "network_card_index": null,
+            "network_interface_id": "eni-t4n65c4ylmk7uqlqvn7e",
+            "network_interface_traffic_mode": "Standard",
+            "network_interfaces": [],
+            "operator_type": null,
+            "os_name": "Ubuntu  22.04 64位",
+            "os_type": "linux",
+            "password": "",
+            "password_inherit": null,
+            "period": null,
+            "period_unit": "",
+            "primary_ip_address": "10.10.1.242",
+            "private_ip": "10.10.1.242",
+            "private_pool_options_id": "",
+            "private_pool_options_match_criteria": "None",
+            "public_ip": "",
+            "queue_pair_number": 0,
+            "renewal_status": "",
+            "resource_group_id": "",
+            "role_name": "",
+            "secondary_private_ip_address_count": 0,
+            "secondary_private_ips": [],
+            "security_enhancement_strategy": null,
+            "security_groups": [
+              "sg-t4n0y017l01btspvtmpd"
+            ],
+            "spot_duration": 0,
+            "spot_interruption_behavior": "",
+            "spot_price_limit": 0,
+            "spot_strategy": "NoSpot",
+            "start_time": "2026-08-15T03:06Z",
+            "status": "Running",
+            "stopped_mode": "Not-applicable",
+            "subnet_id": "vsw-t4nb8ir60mior6qv4gmx9",
+            "system_disk_auto_snapshot_policy_id": "",
+            "system_disk_bursting_enabled": false,
+            "system_disk_category": "cloud_auto",
+            "system_disk_description": "",
+            "system_disk_encrypt_algorithm": null,
+            "system_disk_encrypted": false,
+            "system_disk_id": "d-t4n65c4ylmk7uqlw1g5a",
+            "system_disk_kms_key_id": "",
+            "system_disk_name": "",
+            "system_disk_performance_level": "",
+            "system_disk_provisioned_iops": 0,
+            "system_disk_size": 60,
+            "system_disk_storage_cluster_id": "",
+            "tags": {
+              "Name": "campaign-center-dev-k3s-worker-1",
+              "environment": "dev",
+              "managed_by": "terraform",
+              "project": "campaign-center",
+              "role": "worker",
+              "zone": "ap-southeast-1a"
+            },
+            "timeouts": null,
+            "user_data": "I2Nsb3VkLWNvbmZpZwpwYWNrYWdlX3VwZGF0ZTogdHJ1ZQpwYWNrYWdlX3VwZ3JhZGU6IGZhbHNlCgp0aW1lem9uZTogQXNpYS9TaW5nYXBvcmUKCnBhY2thZ2VzOgogIC0gY3VybAogIC0gd2dldAogIC0gdmltCiAgLSBnaXQKICAtIGh0b3AKICAtIGpxCiAgLSB1bnppcAogIC0gY2EtY2VydGlmaWNhdGVzCiAgLSBnbnVwZwogIC0gbHNvZgogIC0gbmV0LXRvb2xzCgp3cml0ZV9maWxlczoKICAtIHBhdGg6IC9ldGMvbW90ZAogICAgcGVybWlzc2lvbnM6ICIwNjQ0IgogICAgY29udGVudDogfAogICAgICBjYW1wYWlnbi1jZW50ZXIgbm9kZSAod29ya2VyKQogICAgICBFbnZpcm9ubWVudDogZGV2CiAgICAgIE1hbmFnZWQgYnkgVGVycmFmb3JtIGNsb3VkLWluaXQuCgogIC0gcGF0aDogL2V0Yy9jYW1wYWlnbi1jZW50ZXItbm9kZQogICAgcGVybWlzc2lvbnM6ICIwNjQ0IgogICAgY29udGVudDogfAogICAgICByb2xlPXdvcmtlcgogICAgICBlbnZpcm9ubWVudD1kZXYKICAgICAgcHJvamVjdD1jYW1wYWlnbi1jZW50ZXIKCnJ1bmNtZDoKICAtIGVjaG8gIkJhc2ljIG5vZGUgaW5pdGlhbGl6YXRpb24gY29tcGxldGUuIg==",
+            "volume_tags": {
+              "Name": "campaign-center-dev-k3s-worker-1",
+              "environment": "dev",
+              "managed_by": "terraform",
+              "project": "campaign-center",
+              "role": "worker",
+              "zone": "ap-southeast-1a"
+            },
+            "vpc_id": "vpc-t4n38d5l9thkewdkh69ol",
+            "vswitch_id": "vsw-t4nb8ir60mior6qv4gmx9"
+          },
+          "sensitive_attributes": [
+            [
+              {
+                "type": "get_attr",
+                "value": "password"
+              }
+            ]
+          ],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo2MDAwMDAwMDAwMDAsImRlbGV0ZSI6MTIwMDAwMDAwMDAwMCwidXBkYXRlIjo2MDAwMDAwMDAwMDB9fQ==",
+          "dependencies": [
+            "module.network.alicloud_vpc.this",
+            "module.network.alicloud_vswitch.this",
+            "module.network.data.alicloud_zones.vswitch",
+            "module.security_group.alicloud_security_group.this"
+          ]
+        },
+        {
+          "index_key": "worker-2",
+          "schema_version": 0,
+          "attributes": {
+            "allocate_public_ip": null,
+            "auto_release_time": "",
+            "auto_renew_period": 0,
+            "availability_zone": "ap-southeast-1a",
+            "cpu": 2,
+            "cpu_options": [
+              {
+                "core_count": 1,
+                "threads_per_core": 2,
+                "topology_type": ""
+              }
+            ],
+            "create_time": "2026-08-15T05:10Z",
+            "credit_specification": "Standard",
+            "data_disks": [],
+            "dedicated_host_id": "",
+            "deletion_protection": false,
+            "deployment_set_group_no": null,
+            "deployment_set_id": "",
+            "description": "",
+            "dry_run": false,
+            "enable_jumbo_frame": false,
+            "expired_time": "2099-12-31T15:59Z",
+            "force_delete": null,
+            "host_name": "campaign-center-dev-k3s-worker-2",
+            "hpc_cluster_id": "",
+            "http_endpoint": "",
+            "http_put_response_hop_limit": 0,
+            "http_tokens": "",
+            "id": "i-t4naov26kpaqg8sgu184",
+            "image_id": "ubuntu_22_04_x64_20G_alibase_20260522.vhd",
+            "image_options": [
+              {
+                "login_as_non_root": false
+              }
+            ],
+            "include_data_disks": null,
+            "instance_charge_type": "PostPaid",
+            "instance_name": "campaign-center-dev-k3s-worker-2",
+            "instance_type": "ecs.t6-c1m2.large",
+            "internet_charge_type": "PayByTraffic",
+            "internet_max_bandwidth_in": -1,
+            "internet_max_bandwidth_out": 0,
+            "io_optimized": null,
+            "ipv6_address_count": 0,
+            "ipv6_addresses": [],
+            "is_outdated": null,
+            "key_name": "campaign-center-key",
+            "kms_encrypted_password": null,
+            "kms_encryption_context": null,
+            "launch_template_id": null,
+            "launch_template_name": null,
+            "launch_template_version": null,
+            "maintenance_action": "AutoRecover",
+            "maintenance_notify": false,
+            "maintenance_time": [],
+            "memory": 4096,
+            "network_card_index": null,
+            "network_interface_id": "eni-t4naov26kpaqg8sq6c4u",
+            "network_interface_traffic_mode": "Standard",
+            "network_interfaces": [],
+            "operator_type": null,
+            "os_name": "Ubuntu  22.04 64位",
+            "os_type": "linux",
+            "password": "",
+            "password_inherit": null,
+            "period": null,
+            "period_unit": "",
+            "primary_ip_address": "10.10.1.243",
+            "private_ip": "10.10.1.243",
+            "private_pool_options_id": "",
+            "private_pool_options_match_criteria": "None",
+            "public_ip": "",
+            "queue_pair_number": 0,
+            "renewal_status": "",
+            "resource_group_id": "",
+            "role_name": null,
+            "secondary_private_ip_address_count": 0,
+            "secondary_private_ips": [],
+            "security_enhancement_strategy": null,
+            "security_groups": [
+              "sg-t4n0y017l01btspvtmpd"
+            ],
+            "spot_duration": 0,
+            "spot_interruption_behavior": "",
+            "spot_price_limit": 0,
+            "spot_strategy": "NoSpot",
+            "start_time": "2026-08-15T05:10Z",
+            "status": "Running",
+            "stopped_mode": "Not-applicable",
+            "subnet_id": "vsw-t4nb8ir60mior6qv4gmx9",
+            "system_disk_auto_snapshot_policy_id": "",
+            "system_disk_bursting_enabled": false,
+            "system_disk_category": "cloud_auto",
+            "system_disk_description": "",
+            "system_disk_encrypt_algorithm": null,
+            "system_disk_encrypted": false,
+            "system_disk_id": "d-t4naov26kpaqg8sighck",
+            "system_disk_kms_key_id": "",
+            "system_disk_name": "",
+            "system_disk_performance_level": "",
+            "system_disk_provisioned_iops": 0,
+            "system_disk_size": 60,
+            "system_disk_storage_cluster_id": "",
+            "tags": {
+              "Name": "campaign-center-dev-k3s-worker-2",
+              "environment": "dev",
+              "managed_by": "terraform",
+              "project": "campaign-center",
+              "role": "worker",
+              "zone": "ap-southeast-1a"
+            },
+            "timeouts": null,
+            "user_data": "I2Nsb3VkLWNvbmZpZwpwYWNrYWdlX3VwZGF0ZTogdHJ1ZQpwYWNrYWdlX3VwZ3JhZGU6IGZhbHNlCgp0aW1lem9uZTogQXNpYS9TaW5nYXBvcmUKCnBhY2thZ2VzOgogIC0gY3VybAogIC0gd2dldAogIC0gdmltCiAgLSBnaXQKICAtIGh0b3AKICAtIGpxCiAgLSB1bnppcAogIC0gY2EtY2VydGlmaWNhdGVzCiAgLSBnbnVwZwogIC0gbHNvZgogIC0gbmV0LXRvb2xzCgp3cml0ZV9maWxlczoKICAtIHBhdGg6IC9ldGMvbW90ZAogICAgcGVybWlzc2lvbnM6ICIwNjQ0IgogICAgY29udGVudDogfAogICAgICBjYW1wYWlnbi1jZW50ZXIgbm9kZSAod29ya2VyKQogICAgICBFbnZpcm9ubWVudDogZGV2CiAgICAgIE1hbmFnZWQgYnkgVGVycmFmb3JtIGNsb3VkLWluaXQuCgogIC0gcGF0aDogL2V0Yy9jYW1wYWlnbi1jZW50ZXItbm9kZQogICAgcGVybWlzc2lvbnM6ICIwNjQ0IgogICAgY29udGVudDogfAogICAgICByb2xlPXdvcmtlcgogICAgICBlbnZpcm9ubWVudD1kZXYKICAgICAgcHJvamVjdD1jYW1wYWlnbi1jZW50ZXIKCnJ1bmNtZDoKICAtIGVjaG8gIkJhc2ljIG5vZGUgaW5pdGlhbGl6YXRpb24gY29tcGxldGUuIg==",
+            "volume_tags": {
+              "Name": "campaign-center-dev-k3s-worker-2",
+              "environment": "dev",
+              "managed_by": "terraform",
+              "project": "campaign-center",
+              "role": "worker",
+              "zone": "ap-southeast-1a"
+            },
+            "vpc_id": "vpc-t4n38d5l9thkewdkh69ol",
+            "vswitch_id": "vsw-t4nb8ir60mior6qv4gmx9"
+          },
+          "sensitive_attributes": [
+            [
+              {
+                "type": "get_attr",
+                "value": "password"
+              }
+            ]
+          ],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo2MDAwMDAwMDAwMDAsImRlbGV0ZSI6MTIwMDAwMDAwMDAwMCwidXBkYXRlIjo2MDAwMDAwMDAwMDB9fQ==",
+          "dependencies": [
+            "module.network.alicloud_vpc.this",
+            "module.network.alicloud_vswitch.this",
+            "module.network.data.alicloud_zones.vswitch",
+            "module.security_group.alicloud_security_group.this"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "module.k3s_master_eip[0]",
+      "mode": "managed",
+      "type": "alicloud_eip_address",
+      "name": "this",
+      "provider": "provider[\"registry.terraform.io/aliyun/alicloud\"]",
+      "instances": [
+        {
+          "index_key": 0,
+          "schema_version": 0,
+          "attributes": {
+            "activity_id": null,
+            "address_name": "campaign-center-dev-eip",
+            "allocation_id": "eip-t4nx87nprel5z4qutq2y5",
+            "auto_pay": null,
+            "bandwidth": "5",
+            "create_time": "2026-06-20T02:54:14Z",
+            "deletion_protection": false,
+            "description": "",
+            "high_definition_monitor_log_status": "OFF",
+            "id": "eip-t4nx87nprel5z4qutq2y5",
+            "instance_charge_type": "PostPaid",
+            "internet_charge_type": "PayByTraffic",
+            "ip_address": "8.219.134.169",
+            "isp": "BGP",
+            "log_project": null,
+            "log_store": null,
+            "mode": "NAT",
+            "name": "campaign-center-dev-eip",
+            "netmode": "public",
+            "payment_type": "PayAsYouGo",
+            "period": null,
+            "pricing_cycle": null,
+            "public_ip_address_pool_id": null,
+            "resource_group_id": "rg-acfmzlc7lr2jl6y",
+            "security_protection_types": [],
+            "status": "InUse",
+            "tags": {
+              "environment": "dev",
+              "managed_by": "terraform",
+              "project": "campaign-center"
+            },
+            "timeouts": null,
+            "zone": null
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo1NDAwMDAwMDAwMDAsImRlbGV0ZSI6NTQwMDAwMDAwMDAwLCJ1cGRhdGUiOjU0MDAwMDAwMDAwMH19"
+        }
+      ]
+    },
+    {
+      "module": "module.k3s_master_eip[0]",
+      "mode": "managed",
+      "type": "alicloud_eip_association",
+      "name": "ecs",
+      "provider": "provider[\"registry.terraform.io/aliyun/alicloud\"]",
+      "instances": [
+        {
+          "index_key": 0,
+          "schema_version": 0,
+          "attributes": {
+            "allocation_id": "eip-t4nx87nprel5z4qutq2y5",
+            "force": null,
+            "id": "eip-t4nx87nprel5z4qutq2y5:i-t4n3nk1jytydey5xdu5q",
+            "instance_id": "i-t4n3nk1jytydey5xdu5q",
+            "instance_type": "EcsInstance",
+            "mode": "NAT",
+            "private_ip_address": "",
+            "timeouts": null,
+            "vpc_id": ""
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjozMDAwMDAwMDAwMDAsImRlbGV0ZSI6MzAwMDAwMDAwMDAwLCJ1cGRhdGUiOjMwMDAwMDAwMDAwMH19",
+          "dependencies": [
+            "module.ecs_k3s_nodes.alicloud_instance.k3s_nodes",
+            "module.k3s_master_eip.alicloud_eip_address.this",
+            "module.network.alicloud_vpc.this",
+            "module.network.alicloud_vswitch.this",
+            "module.network.data.alicloud_zones.vswitch",
+            "module.security_group.alicloud_security_group.this"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "module.k3s_worker_eips[\"worker-2\"]",
+      "mode": "managed",
+      "type": "alicloud_eip_address",
+      "name": "this",
+      "provider": "provider[\"registry.terraform.io/aliyun/alicloud\"]",
+      "instances": [
+        {
+          "index_key": 0,
+          "schema_version": 0,
+          "attributes": {
+            "activity_id": null,
+            "address_name": "campaign-center-dev-eip-worker-2",
+            "allocation_id": "eip-t4nfrnualtj96ps75wp8k",
+            "auto_pay": null,
+            "bandwidth": "5",
+            "create_time": "2026-08-15T05:10:49Z",
+            "deletion_protection": false,
+            "description": "",
+            "high_definition_monitor_log_status": "OFF",
+            "id": "eip-t4nfrnualtj96ps75wp8k",
+            "instance_charge_type": "PostPaid",
+            "internet_charge_type": "PayByTraffic",
+            "ip_address": "47.236.138.247",
+            "isp": "BGP",
+            "log_project": null,
+            "log_store": null,
+            "mode": "NAT",
+            "name": "campaign-center-dev-eip-worker-2",
+            "netmode": "public",
+            "payment_type": "PayAsYouGo",
+            "period": null,
+            "pricing_cycle": null,
+            "public_ip_address_pool_id": null,
+            "resource_group_id": "rg-acfmzlc7lr2jl6y",
+            "security_protection_types": null,
+            "status": "Available",
+            "tags": {
+              "environment": "dev",
+              "managed_by": "terraform",
+              "project": "campaign-center"
+            },
+            "timeouts": null,
+            "zone": null
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo1NDAwMDAwMDAwMDAsImRlbGV0ZSI6NTQwMDAwMDAwMDAwLCJ1cGRhdGUiOjU0MDAwMDAwMDAwMH19",
+          "dependencies": [
+            "module.ecs_k3s_nodes.alicloud_instance.k3s_nodes",
+            "module.network.alicloud_vpc.this",
+            "module.network.alicloud_vswitch.this",
+            "module.network.data.alicloud_zones.vswitch",
+            "module.security_group.alicloud_security_group.this"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "module.k3s_worker_eips[\"worker-2\"]",
+      "mode": "managed",
+      "type": "alicloud_eip_association",
+      "name": "ecs",
+      "provider": "provider[\"registry.terraform.io/aliyun/alicloud\"]",
+      "instances": [
+        {
+          "index_key": 0,
+          "schema_version": 0,
+          "attributes": {
+            "allocation_id": "eip-t4nfrnualtj96ps75wp8k",
+            "force": null,
+            "id": "eip-t4nfrnualtj96ps75wp8k:i-t4naov26kpaqg8sgu184",
+            "instance_id": "i-t4naov26kpaqg8sgu184",
+            "instance_type": "EcsInstance",
+            "mode": "NAT",
+            "private_ip_address": "",
+            "timeouts": null,
+            "vpc_id": ""
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjozMDAwMDAwMDAwMDAsImRlbGV0ZSI6MzAwMDAwMDAwMDAwLCJ1cGRhdGUiOjMwMDAwMDAwMDAwMH19",
+          "dependencies": [
+            "module.ecs_k3s_nodes.alicloud_instance.k3s_nodes",
+            "module.k3s_worker_eips.alicloud_eip_address.this",
+            "module.network.alicloud_vpc.this",
+            "module.network.alicloud_vswitch.this",
+            "module.network.data.alicloud_zones.vswitch",
+            "module.security_group.alicloud_security_group.this"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "module.network",
+      "mode": "data",
+      "type": "alicloud_zones",
+      "name": "vswitch",
+      "provider": "provider[\"registry.terraform.io/aliyun/alicloud\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "available_disk_category": null,
+            "available_instance_type": null,
+            "available_resource_creation": "VSwitch",
+            "available_slb_address_ip_version": null,
+            "available_slb_address_type": null,
+            "enable_details": false,
+            "id": "1750631417",
+            "ids": [
+              "ap-southeast-1a",
+              "ap-southeast-1b",
+              "ap-southeast-1c",
+              "ap-southeast-1d"
+            ],
+            "instance_charge_type": "PostPaid",
+            "multi": false,
+            "network_type": null,
+            "output_file": null,
+            "spot_strategy": "NoSpot",
+            "zones": [
+              {
+                "available_disk_categories": [],
+                "available_instance_types": [],
+                "available_resource_creation": [],
+                "id": "ap-southeast-1a",
+                "local_name": "",
+                "multi_zone_ids": [],
+                "slb_slave_zone_ids": []
+              },
+              {
+                "available_disk_categories": [],
+                "available_instance_types": [],
+                "available_resource_creation": [],
+                "id": "ap-southeast-1b",
+                "local_name": "",
+                "multi_zone_ids": [],
+                "slb_slave_zone_ids": []
+              },
+              {
+                "available_disk_categories": [],
+                "available_instance_types": [],
+                "available_resource_creation": [],
+                "id": "ap-southeast-1c",
+                "local_name": "",
+                "multi_zone_ids": [],
+                "slb_slave_zone_ids": []
+              },
+              {
+                "available_disk_categories": [],
+                "available_instance_types": [],
+                "available_resource_creation": [],
+                "id": "ap-southeast-1d",
+                "local_name": "",
+                "multi_zone_ids": [],
+                "slb_slave_zone_ids": []
+              }
+            ]
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0
+        }
+      ]
+    },
+    {
+      "module": "module.network",
+      "mode": "managed",
+      "type": "alicloud_vpc",
+      "name": "this",
+      "provider": "provider[\"registry.terraform.io/aliyun/alicloud\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "cidr_block": "10.10.0.0/16",
+            "classic_link_enabled": false,
+            "create_time": "2026-06-20T02:54:12Z",
+            "description": "",
+            "dns_hostname_status": "DISABLED",
+            "dry_run": null,
+            "enable_ipv6": false,
+            "force_delete": null,
+            "id": "vpc-t4n38d5l9thkewdkh69ol",
+            "ipv4_cidr_mask": null,
+            "ipv4_ipam_pool_id": null,
+            "ipv6_cidr_block": "",
+            "ipv6_cidr_blocks": [],
+            "ipv6_isp": null,
+            "is_default": false,
+            "name": "campaign-center-dev-vpc",
+            "region_id": "ap-southeast-1",
+            "resource_group_id": "rg-acfmzlc7lr2jl6y",
+            "route_table_id": "vtb-t4nkm1lavvmpkr3gsz3bb",
+            "router_id": "vrt-t4nnlw67gl14vbbhvuu86",
+            "router_table_id": "vtb-t4nkm1lavvmpkr3gsz3bb",
+            "secondary_cidr_blocks": [],
+            "secondary_cidr_mask": null,
+            "status": "Available",
+            "system_route_table_description": "",
+            "system_route_table_name": "",
+            "system_route_table_route_propagation_enable": true,
+            "tags": {
+              "environment": "dev",
+              "managed_by": "terraform",
+              "project": "campaign-center"
+            },
+            "timeouts": null,
+            "user_cidrs": [],
+            "vpc_name": "campaign-center-dev-vpc"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo2MDAwMDAwMDAwMDAsImRlbGV0ZSI6MzAwMDAwMDAwMDAwLCJ1cGRhdGUiOjMwMDAwMDAwMDAwMH19"
+        }
+      ]
+    },
+    {
+      "module": "module.network",
+      "mode": "managed",
+      "type": "alicloud_vswitch",
+      "name": "this",
+      "provider": "provider[\"registry.terraform.io/aliyun/alicloud\"]",
+      "instances": [
+        {
+          "index_key": "ap-southeast-1a",
+          "schema_version": 0,
+          "attributes": {
+            "availability_zone": "ap-southeast-1a",
+            "cidr_block": "10.10.1.0/24",
+            "create_time": "2026-06-20T02:54:18Z",
+            "description": "",
+            "enable_ipv6": false,
+            "id": "vsw-t4nb8ir60mior6qv4gmx9",
+            "ipv6_cidr_block": "",
+            "ipv6_cidr_block_mask": null,
+            "is_default": false,
+            "name": "campaign-center-dev-vswitch-ap-southeast-1a",
+            "status": "Available",
+            "tags": {
+              "environment": "dev",
+              "managed_by": "terraform",
+              "project": "campaign-center"
+            },
+            "timeouts": null,
+            "vpc_id": "vpc-t4n38d5l9thkewdkh69ol",
+            "vpc_ipv6_cidr_block": null,
+            "vswitch_name": "campaign-center-dev-vswitch-ap-southeast-1a",
+            "zone_id": "ap-southeast-1a"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjozMDAwMDAwMDAwMDAsImRlbGV0ZSI6NjAwMDAwMDAwMDAwLCJ1cGRhdGUiOjMwMDAwMDAwMDAwMH19",
+          "dependencies": [
+            "module.network.alicloud_vpc.this",
+            "module.network.data.alicloud_zones.vswitch"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "module.security_group",
+      "mode": "managed",
+      "type": "alicloud_security_group",
+      "name": "this",
+      "provider": "provider[\"registry.terraform.io/aliyun/alicloud\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "create_time": "2026-06-20T02:54:19Z",
+            "description": "",
+            "id": "sg-t4n0y017l01btspvtmpd",
+            "inner_access": true,
+            "inner_access_policy": "Accept",
+            "name": "campaign-center-dev-sg",
+            "resource_group_id": "",
+            "security_group_name": "campaign-center-dev-sg",
+            "security_group_type": "normal",
+            "tags": {
+              "environment": "dev",
+              "managed_by": "terraform",
+              "project": "campaign-center"
+            },
+            "timeouts": null,
+            "vpc_id": "vpc-t4n38d5l9thkewdkh69ol"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjozMDAwMDAwMDAwMDAsImRlbGV0ZSI6NjAwMDAwMDAwMDAwLCJ1cGRhdGUiOjMwMDAwMDAwMDAwMH19",
+          "dependencies": [
+            "module.network.alicloud_vpc.this"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "module.security_group",
+      "mode": "managed",
+      "type": "alicloud_security_group_rule",
+      "name": "egress_all",
+      "provider": "provider[\"registry.terraform.io/aliyun/alicloud\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "cidr_ip": "0.0.0.0/0",
+            "description": "Allow all egress",
+            "id": "sg-t4n0y017l01btspvtmpd:egress:all:-1/-1:intranet:0.0.0.0/0:accept:1",
+            "ip_protocol": "all",
+            "ipv6_cidr_ip": "",
+            "nic_type": "intranet",
+            "policy": "accept",
+            "port_range": "-1/-1",
+            "prefix_list_id": "",
+            "priority": 1,
+            "security_group_id": "sg-t4n0y017l01btspvtmpd",
+            "security_group_rule_id": "sgr-t4nanvfpl1a8b0q7ukl1",
+            "source_group_owner_account": "",
+            "source_security_group_id": "",
+            "type": "egress"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "bnVsbA==",
+          "dependencies": [
+            "module.network.alicloud_vpc.this",
+            "module.security_group.alicloud_security_group.this"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "module.security_group",
+      "mode": "managed",
+      "type": "alicloud_security_group_rule",
+      "name": "http",
+      "provider": "provider[\"registry.terraform.io/aliyun/alicloud\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "cidr_ip": "0.0.0.0/0",
+            "description": "HTTP",
+            "id": "sg-t4n0y017l01btspvtmpd:ingress:tcp:80/80:intranet:0.0.0.0/0:accept:1",
+            "ip_protocol": "tcp",
+            "ipv6_cidr_ip": "",
+            "nic_type": "intranet",
+            "policy": "accept",
+            "port_range": "80/80",
+            "prefix_list_id": "",
+            "priority": 1,
+            "security_group_id": "sg-t4n0y017l01btspvtmpd",
+            "security_group_rule_id": "sgr-t4n06eqmrhzue33fv9c6",
+            "source_group_owner_account": "",
+            "source_security_group_id": "",
+            "type": "ingress"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "bnVsbA==",
+          "dependencies": [
+            "module.network.alicloud_vpc.this",
+            "module.security_group.alicloud_security_group.this"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "module.security_group",
+      "mode": "managed",
+      "type": "alicloud_security_group_rule",
+      "name": "https",
+      "provider": "provider[\"registry.terraform.io/aliyun/alicloud\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "cidr_ip": "0.0.0.0/0",
+            "description": "HTTPS",
+            "id": "sg-t4n0y017l01btspvtmpd:ingress:tcp:443/443:intranet:0.0.0.0/0:accept:1",
+            "ip_protocol": "tcp",
+            "ipv6_cidr_ip": "",
+            "nic_type": "intranet",
+            "policy": "accept",
+            "port_range": "443/443",
+            "prefix_list_id": "",
+            "priority": 1,
+            "security_group_id": "sg-t4n0y017l01btspvtmpd",
+            "security_group_rule_id": "sgr-t4n3n6g99dzhtxzzp7d6",
+            "source_group_owner_account": "",
+            "source_security_group_id": "",
+            "type": "ingress"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "bnVsbA==",
+          "dependencies": [
+            "module.network.alicloud_vpc.this",
+            "module.security_group.alicloud_security_group.this"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "module.security_group",
+      "mode": "managed",
+      "type": "alicloud_security_group_rule",
+      "name": "k3s_api",
+      "provider": "provider[\"registry.terraform.io/aliyun/alicloud\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "cidr_ip": "0.0.0.0/0",
+            "description": "K3s API from allowed admin CIDR",
+            "id": "sg-t4n0y017l01btspvtmpd:ingress:tcp:6443/6443:intranet:0.0.0.0/0:accept:1",
+            "ip_protocol": "tcp",
+            "ipv6_cidr_ip": "",
+            "nic_type": "intranet",
+            "policy": "accept",
+            "port_range": "6443/6443",
+            "prefix_list_id": "",
+            "priority": 1,
+            "security_group_id": "sg-t4n0y017l01btspvtmpd",
+            "security_group_rule_id": "sgr-t4nhoxztdbet4quu49xl",
+            "source_group_owner_account": "",
+            "source_security_group_id": "",
+            "type": "ingress"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "bnVsbA==",
+          "dependencies": [
+            "module.network.alicloud_vpc.this",
+            "module.security_group.alicloud_security_group.this"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "module.security_group",
+      "mode": "managed",
+      "type": "alicloud_security_group_rule",
+      "name": "ssh",
+      "provider": "provider[\"registry.terraform.io/aliyun/alicloud\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "cidr_ip": "0.0.0.0/0",
+            "description": "SSH from allowed CIDR",
+            "id": "sg-t4n0y017l01btspvtmpd:ingress:tcp:22/22:intranet:0.0.0.0/0:accept:1",
+            "ip_protocol": "tcp",
+            "ipv6_cidr_ip": "",
+            "nic_type": "intranet",
+            "policy": "accept",
+            "port_range": "22/22",
+            "prefix_list_id": "",
+            "priority": 1,
+            "security_group_id": "sg-t4n0y017l01btspvtmpd",
+            "security_group_rule_id": "sgr-t4n14n6wgmtrj261rsh3",
+            "source_group_owner_account": "",
+            "source_security_group_id": "",
+            "type": "ingress"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "bnVsbA==",
+          "dependencies": [
+            "module.network.alicloud_vpc.this",
+            "module.security_group.alicloud_security_group.this"
+          ]
+        }
+      ]
+    }
+  ],
+  "check_results": [
+    {
+      "object_kind": "var",
+      "config_addr": "module.k3s_worker_eips.var.attachment_mode",
+      "status": "pass",
+      "objects": [
+        {
+          "object_addr": "module.k3s_worker_eips[\"worker-2\"].var.attachment_mode",
+          "status": "pass"
+        }
+      ]
+    },
+    {
+      "object_kind": "resource",
+      "config_addr": "module.network.alicloud_vswitch.this",
+      "status": "pass",
+      "objects": [
+        {
+          "object_addr": "module.network.alicloud_vswitch.this[\"ap-southeast-1a\"]",
+          "status": "pass"
+        }
+      ]
+    },
+    {
+      "object_kind": "var",
+      "config_addr": "module.network.var.vswitch_cidrs",
+      "status": "pass",
+      "objects": [
+        {
+          "object_addr": "module.network.var.vswitch_cidrs",
+          "status": "pass"
+        }
+      ]
+    },
+    {
+      "object_kind": "var",
+      "config_addr": "module.network.var.zones",
+      "status": "pass",
+      "objects": [
+        {
+          "object_addr": "module.network.var.zones",
+          "status": "pass"
+        }
+      ]
+    },
+    {
+      "object_kind": "var",
+      "config_addr": "var.zones",
+      "status": "pass",
+      "objects": [
+        {
+          "object_addr": "var.zones",
+          "status": "pass"
+        }
+      ]
+    },
+    {
+      "object_kind": "var",
+      "config_addr": "module.ecs_k3s_nodes.var.zones",
+      "status": "pass",
+      "objects": [
+        {
+          "object_addr": "module.ecs_k3s_nodes.var.zones",
+          "status": "pass"
+        }
+      ]
+    },
+    {
+      "object_kind": "var",
+      "config_addr": "module.k3s_master_eip.var.attachment_mode",
+      "status": "pass",
+      "objects": [
+        {
+          "object_addr": "module.k3s_master_eip[0].var.attachment_mode",
+          "status": "pass"
+        }
+      ]
+    }
+  ]
+}
+

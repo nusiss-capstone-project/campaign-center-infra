@@ -54,8 +54,15 @@ EXTRACTED="$(echo "${TF_JSON}" | jq -c '
     if . == null or . == "" then []
     elif type == "array" then [.[] | select(. != null and . != "")]
     elif type == "string" then [.] else [] end;
+  # Keep empty strings so worker public IPs stay index-aligned with private IPs.
+  def as_aligned_array:
+    if . == null then []
+    elif type == "array" then [.[] | if . == null then "" else . end]
+    elif type == "string" then [.] else [] end;
   def first_array($root; $keys):
     reduce $keys[] as $k ([]; if length == 0 then (out($root; $k) | as_array) else . end);
+  def first_aligned_array($root; $keys):
+    reduce $keys[] as $k ([]; if length == 0 then (out($root; $k) | as_aligned_array) else . end);
   def ssh_public_ip($root):
     (out($root; "ssh_command") // "") |
     if test("root@[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+")
@@ -77,7 +84,7 @@ EXTRACTED="$(echo "${TF_JSON}" | jq -c '
     "k3s_master_private_ips", "master_private_ips",
     "k3s_master_private_ip",  "master_private_ip"
   ])) as $master_priv |
-  (first_array($root; [
+  (first_aligned_array($root; [
     "k3s_worker_public_ips", "worker_public_ips",
     "k3s_worker_public_ip",  "worker_public_ip"
   ])) as $worker_pub |

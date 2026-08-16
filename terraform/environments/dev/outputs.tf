@@ -89,15 +89,17 @@ output "worker_private_ips" {
 }
 
 locals {
+  # Map of TF-managed worker EIPs (may omit workers with manual EIPs).
+  worker_eip_by_key = {
+    for k, m in module.k3s_worker_eips : k => m.eip_address
+  }
+  # Index-aligned with worker_private_ips. Prefer TF EIP, then override, else "".
+  # Use try() (not coalesce): coalesce() errors when every candidate is null/"".
   worker_public_ips_resolved = [
     for idx in range(length(module.ecs_k3s_nodes.worker_private_ips)) :
-    coalesce(
-      try(module.k3s_worker_eips["worker-${idx + 1}"].eip_address, null),
-      (
-        length(var.worker_public_ip_overrides) > idx && var.worker_public_ip_overrides[idx] != ""
-        ? var.worker_public_ip_overrides[idx]
-        : null
-      ),
+    try(
+      local.worker_eip_by_key["worker-${idx + 1}"],
+      var.worker_public_ip_overrides[idx],
       ""
     )
   ]
