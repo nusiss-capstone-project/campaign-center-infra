@@ -45,7 +45,7 @@ download_linkerd_charts() {
       continue
     fi
     echo "==> Downloading ${f} (curl -4)..."
-    curl -4 -fL --retry 5 --retry-delay 2 -o "${dir}/${f}" "${base}/${f}"
+    curl -4 -fL --proto '=https' --tlsv1.2 --retry 5 --retry-delay 2 -o "${dir}/${f}" "${base}/${f}"
   done
 }
 

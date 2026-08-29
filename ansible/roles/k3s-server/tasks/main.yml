@@ -13,7 +13,7 @@
 - name: Persist KUBECONFIG for kubectl on server nodes
   ansible.builtin.copy:
     dest: /etc/profile.d/k3s-kubeconfig.sh
-    mode: "0644"
+    mode: "0640"
     content: |
       # Managed by Ansible — kubectl uses the K3s admin kubeconfig on this node
       export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
@@ -52,7 +52,7 @@
   ansible.builtin.file:
     path: /etc/k3s
     state: directory
-    mode: "0755"
+    mode: "0750"
 
 - name: Render K3s server environment file
   ansible.builtin.template:

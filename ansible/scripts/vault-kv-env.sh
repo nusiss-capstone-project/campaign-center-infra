@@ -88,6 +88,8 @@ assert_not_protected_path() {
       echo "ERROR: refusing operation on protected path ${MOUNT}/${logical}" >&2
       exit 1
       ;;
+    *)
+      ;;
   esac
 }
 

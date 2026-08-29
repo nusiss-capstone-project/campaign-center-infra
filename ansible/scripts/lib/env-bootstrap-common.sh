@@ -58,16 +58,19 @@ assert_safe_env() {
     echo "ERROR: refusing to operate on protected env '${PROTECTED_ENV}'." >&2
     exit 1
   fi
+  return 0
 }
 
 root_app_name() {
   local env_name="$1"
   echo "campaign-gitops-root-${env_name}"
+  return 0
 }
 
 workload_ns() {
   local env_name="$1"
   echo "campaign-${env_name}"
+  return 0
 }
 
 assert_safe_root_app() {
@@ -80,6 +83,7 @@ assert_safe_root_app() {
     echo "ERROR: refusing Application name '${name}' (must be campaign-gitops-root-<env>)." >&2
     exit 1
   fi
+  return 0
 }
 
 assert_safe_workload_ns() {
@@ -92,6 +96,7 @@ assert_safe_workload_ns() {
     echo "ERROR: refusing namespace '${ns}' (must be campaign-<env>)." >&2
     exit 1
   fi
+  return 0
 }
 
 require_cmd() {
@@ -99,6 +104,7 @@ require_cmd() {
     echo "ERROR: '$1' not found." >&2
     exit 1
   }
+  return 0
 }
 
 load_kubeconfig() {
@@ -109,10 +115,12 @@ load_kubeconfig() {
     exit 1
   }
   export KUBECONFIG="${path}"
+  return 0
 }
 
 kafka_ui_api_base() {
   echo "http://127.0.0.1:${KAFKA_UI_PF_PORT}/api/clusters/${KAFKA_UI_CLUSTER_NAME}"
+  return 0
 }
 
 wait_kube_api() {
@@ -185,6 +193,7 @@ kafka_ui_pf_stop() {
   KAFKA_UI_PF_PID=""
   # Keep EXIT trap cleared only when intentionally stopping; leave INT/TERM for cleanup during run.
   trap - EXIT INT TERM
+  return 0
 }
 
 kafka_ui_create_topic() {
@@ -224,6 +233,7 @@ for t in data:
   elif isinstance(t, str):
     print(t)
 '
+  return 0
 }
 
 kafka_ui_topic_exists() {
@@ -232,6 +242,7 @@ kafka_ui_topic_exists() {
   code="$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 30 \
     "$(kafka_ui_api_base)/topics/${topic}")"
   [[ "${code}" == "200" ]]
+  return $?
 }
 
 kafka_topics_bin() {
@@ -241,11 +252,13 @@ kafka_topics_bin() {
   else
     echo /opt/bitnami/kafka/bin/kafka-topics.sh
   fi
+  return 0
 }
 
 kafka_topics_exec() {
   kubectl -n "${KAFKA_NS}" exec "${KAFKA_POD}" -c kafka -- \
     env KAFKA_HEAP_OPTS="${KAFKA_TOOLS_HEAP_OPTS}" "$@"
+  return $?
 }
 
 # Delete topic via broker CLI (used when kafka-ui returns "Topic deletion restricted").
@@ -257,6 +270,7 @@ kafka_broker_delete_topic() {
     --bootstrap-server "${KAFKA_BOOTSTRAP}" \
     --delete \
     --topic "${topic}"
+  return $?
 }
 
 # Delete topic if it exists. Skips missing topics (no DELETE call).
@@ -309,6 +323,7 @@ cleanup_workload_ns_orphans() {
       echo "    skip: no ${kind} in ${ns}"
     fi
   done
+  return 0
 }
 
 # Copy a secret from SECRET_SOURCE_NS into workload ns; label managed-by=provision-env.
@@ -341,6 +356,7 @@ out={
 }
 json.dump(out,sys.stdout)
 " | kubectl apply -f -
+  return 0
 }
 
 # Delete secret in workload ns only if labeled managed-by=provision-env.
@@ -365,4 +381,5 @@ delete_provision_secret() {
   else
     echo "    skip: Secret/${secret_name} present but managed-by='${managed:-<none>}' (not provision-env)"
   fi
+  return 0
 }

@@ -34,7 +34,7 @@
 - name: Ensure kernel modules load on boot
   ansible.builtin.copy:
     dest: /etc/modules-load.d/k3s.conf
-    mode: "0644"
+    mode: "0640"
     content: |
       br_netfilter
       overlay
@@ -42,7 +42,7 @@
 - name: Configure Kubernetes sysctl settings
   ansible.builtin.copy:
     dest: /etc/sysctl.d/99-k3s.conf
-    mode: "0644"
+    mode: "0640"
     content: |
       net.bridge.bridge-nf-call-iptables = 1
       net.bridge.bridge-nf-call-ip6tables = 1
@@ -56,13 +56,13 @@
   ansible.builtin.file:
     path: /etc/rancher/k3s
     state: directory
-    mode: "0755"
+    mode: "0750"
   when: k3s_registry_mirrors_enabled | bool
 
 - name: Configure K3s container registry mirrors
   ansible.builtin.template:
     src: registries.yaml.j2
     dest: /etc/rancher/k3s/registries.yaml
-    mode: "0644"
+    mode: "0640"
   when: k3s_registry_mirrors_enabled | bool
   notify: Restart K3s for updated registry mirrors

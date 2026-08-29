@@ -83,7 +83,7 @@ install_cli() {
 
   local url="https://github.com/linkerd/linkerd2/releases/download/${LINKERD_CLI_VERSION}/${asset}"
   echo "==> Downloading Linkerd CLI ${LINKERD_CLI_VERSION}"
-  curl -4 -fL --retry 5 --retry-delay 2 -o "${dest}/linkerd" "${url}"
+  curl -4 -fL --proto '=https' --tlsv1.2 --retry 5 --retry-delay 2 -o "${dest}/linkerd" "${url}"
   chmod +x "${dest}/linkerd"
   echo "==> Installed ${dest}/linkerd"
   echo "    Add to PATH: export PATH=${dest}:\$PATH"
@@ -97,7 +97,7 @@ download_viz_chart() {
     return 0
   fi
   echo "==> Downloading ${f} (curl -4)..."
-  curl -4 -fL --retry 5 --retry-delay 2 \
+  curl -4 -fL --proto '=https' --tlsv1.2 --retry 5 --retry-delay 2 \
     -o "${CHART_DIR}/${f}" \
     "https://helm.linkerd.io/edge/${f}"
 }

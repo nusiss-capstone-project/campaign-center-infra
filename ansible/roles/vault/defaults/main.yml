@@ -13,7 +13,10 @@ vault_server_service_type: ClusterIP
 # In-cluster API (TLS disabled in dev standalone config)
 vault_service_name: vault
 vault_api_port: 8200
-vault_server_url: "http://{{ vault_service_name }}.{{ vault_namespace }}.svc.cluster.local:{{ vault_api_port }}"
+# Clear-text http is intentional on the cluster-local Service only (TLS off in
+# standalone/dev). Do not expose this URL outside the VPC; external UI uses
+# vault_ingress_* + TLS when enabled.
+vault_server_url: "http://{{ vault_service_name }}.{{ vault_namespace }}.svc.cluster.local:{{ vault_api_port }}" # NOSONAR — in-cluster plaintext by design (dev)
 
 vault_memory_request: 256Mi
 vault_memory_limit: 512Mi

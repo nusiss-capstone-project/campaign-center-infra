@@ -7,8 +7,10 @@ ANSIBLE_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 REPO_ROOT="$(cd "${ANSIBLE_DIR}/.." && pwd)"
 
 usage() {
-  echo "Usage: $(basename "$0") <env>"
-  echo "Example: $(basename "$0") dev"
+  local script_name
+  script_name="$(basename "$0")"
+  echo "Usage: ${script_name} <env>"
+  echo "Example: ${script_name} dev"
   exit 1
 }
 
@@ -160,7 +162,10 @@ K3S_VERSION="${K3S_VERSION:-v1.35.5+k3s1}"
 FIRST_MASTER_PRIVATE="$(echo "${MASTER_PRIVATE_IPS}" | jq -r '.[0]')"
 FIRST_MASTER_PUBLIC="$(echo "${MASTER_PUBLIC_IPS}" | jq -r '.[0]')"
 
-pad2() { printf '%02d' "$1"; }
+pad2() {
+  local n="$1"
+  printf '%02d' "${n}"
+}
 
 mkdir -p "${INV_DIR}"
 
